@@ -1,5 +1,11 @@
 import numpy as np
 
-x = np.zeros((2,2))
 
+def hello_world():
+  print("Hello wolrd")
+  
+if __name__ = '__main__':
+  hello_world()
+
+x = np.zeros((2,2))
 print(x)
