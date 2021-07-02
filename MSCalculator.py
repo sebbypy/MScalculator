@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
-
+import io
 
 def main():
 
     plt.close('all')
     
     multiLayer_hConv_MS(dx=0.01)
+   
+
     
     
 
@@ -346,3 +348,7 @@ def getMSNodeFromID(IDMatrix,searchedMSID):
 main()
 
 
+buf = io.BytesIO()
+plt.savefig(buf, format='png')
+buf.seek(0)
+img_str = 'data:image/png;base64,' + base64.b64encode(buf.read()).decode('UTF-8')`
