@@ -529,8 +529,10 @@ X,Y,T = multiLayer_hConv_MS(eIsol=[0.01,0.01,0.05,0.01],
                             dx=0.005, 
                             MStype='U-shape',
                             plot=False)
+print("before multiply")
 X=X*100
 Y=Y*100
+print("after multiply")
     
     
     
