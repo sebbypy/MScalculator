@@ -10,16 +10,9 @@ Created on Fri Jul  9 09:35:28 2021
 import numpy as np
     
 
-def multiLayer_hConv_MS(*,eIsol = [0.01,0.02,0.1] , kIsol=[0.20,0.13,0.035], pMetal=0.03, wMetal = 0.05, hMetal = 0.05, entreAxe = 0.6,dx = 5e-3 ,kMetal = 50, eMetal=6e-4, hi=10, he=10, MStype='U-shape'):
-
-    #eIsol: list of layers thickness
-    #kIsol: list of layers lambda
-    #pMetal = postiion of the metal from inside (cm)
-        
+def multiLayer_hConv_MS(*,eIsol = [0.01,0.02,0.1] , kIsol=[0.20,0.13,0.035], pMetal=0.03, wMetal = 0.05, hMetal = 0.05, entreAxe = 0.6,dx = 5e-3 ,kMetal = 50, eMetal=6e-4, hi=10, he=10, MStype='U-shape',Ti=20,Te=0):
+      
     dy = dx        
-    
-    Te=0
-    Ti=20
     
     ndx = int(np.sum(eIsol)/dx)+1
     ndy= int(entreAxe/dy)+1
