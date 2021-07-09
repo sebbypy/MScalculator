@@ -195,15 +195,19 @@ def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIso
     RLayer = Rglobal - Rsi - Rse
     ULayer = 1/RLayer
     
-    Rtheoritical = np.sum(np.array(eIsol)/np.array(kIsol))
+    R2 = np.sum(np.array(eIsol)/np.array(kIsol)) # sum of e/lambda
+    R1 = R2 + Rsi + Rse                          # incl Rsi and Rse
+    R3 = Rglobal                                 # R with metal,, incl Rsi and Rse
+    R4 = RLayer                                  # R with metal, solid layers only
     
-    print('Unperturbed R-value ',np.round(Rtheoritical,2),'W/m²K')
+    print('Unperturbed R-value ',np.round(R2,2),'W/m²K')
     print('R value ',np.round(RLayer,2),'m²K/W')   
     print('U value ',np.round(ULayer,2),'W/m²K')   
     
-    return {'Rtheoritical':Rtheoritical,
-            'RLayer':RLayer,
-            'Rglobal':Rglobal
+    return {'R1':R1,
+            'R2':R2,
+            'R3':R3,
+            'R4':R4
             }
 
     
