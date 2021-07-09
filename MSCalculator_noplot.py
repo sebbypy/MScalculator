@@ -179,7 +179,7 @@ def multiLayer_hConv_MS(*,eIsol = [0.01,0.02,0.1] , kIsol=[0.20,0.13,0.035], pMe
     RvaluesDict = computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIsol,kIsol,Xuns,Yuns)
 
     
-    return [Xuns,Yuns,T]
+    return [Xuns,Yuns,T,RvaluesDict]
     
 
 def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIsol,kIsol,Xuns,Yuns):
