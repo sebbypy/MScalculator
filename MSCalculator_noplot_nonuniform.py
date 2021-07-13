@@ -9,7 +9,6 @@ Created on Fri Jul  9 09:35:28 2021
 
 import numpy as np
     
-import sys
 #Non uniform version to have an automatic mesh with variable step size. 
 
 #Imagined mesh rules:
@@ -742,32 +741,3 @@ def getMSNodeFromID(IDMatrix,searchedMSID):
     return i[0],j[0]
 
 
-    
-if __name__ == '__main__':
-    #genMesh()
-
-
-    kMetal = 50
-    eMetal = 6e-4
-    entreAxe = 0.6
-    pMetal = 0.03
-    wMetal = 0.05
-    hMetal = 0.05
-    
-    Ti=20
-    Te=0
-    hi=10
-    he=10
-
-    shape = 'C-shape'
-    
-    metalProps = {'kMetal':kMetal,'eMetal':eMetal,'entreAxe':entreAxe,'shape':shape,'pMetal':pMetal,'hMetal':hMetal,'wMetal':wMetal}   
-    boundaryConditions={'Ti':Ti,'Te':Te,'hi':hi,'he':he}
-    
-    eIsol = [0.01,0.02,0.05,0.09,0.05]
-    kIsol=[0.20,0.13,0.035,0.035,1.5]
-    
-    #
-    X,Y,T,Rdict = multiLayer_hConv_MS(eIsol = eIsol,kIsol = kIsol , pMetal=pMetal , wMetal = wMetal, hMetal = hMetal, entreAxe = entreAxe,kMetal = kMetal, eMetal = eMetal, hi=hi, he=he, MStype=shape,Ti=Ti,Te=Te)
-
-    
