@@ -306,20 +306,20 @@ def multiLayer_hConv_MS(*,eIsol = [0.2] , kIsol=[0.035], pMetal=0.0, wMetal = 0.
             #case 4: normal bot: symmetric
             if (j== 0 and (i !=0 and i != npx-1)):
 
-                A[n,n] = -(kLeft/dxLeft + kRight/dxRight) * ALeftRightUp
+                A[n,n] = -(kLeft/dxLeft + kRight/dxRight) * ALeftRightUp - (1/dyUp)  * ( kLeft*AUpDownLeft +kRight*AUpDownRight)
                 A[n,nLeft]  = kLeft/dxLeft*ALeftRightUp
                 A[n,nRight] = kRight/dxRight*ALeftRightUp
-                #A[n,nUp]    = (1/dyUp)  * ( kLeft*AUpDownLeft +kRight*AUpDownRight)
+                A[n,nUp]   = (1/dyUp)  * ( kLeft*AUpDownLeft +kRight*AUpDownRight)
 
                 b[n] = 0
                 
             #case 5: normal top: symmetric
             if (j== npy-1 and (i !=0 and i != npx-1)):
 
-                A[n,n] = -(kLeft/dxLeft + kRight/dxRight) * ALeftRightDown
+                A[n,n] = -(kLeft/dxLeft + kRight/dxRight) * ALeftRightDown - (1/dyDown)* ( kLeft*AUpDownLeft +kRight*AUpDownRight)
                 A[n,nLeft]  = kLeft/dxLeft*ALeftRightDown
                 A[n,nRight] = kRight/dxRight*ALeftRightDown
-                #A[n,nDown]  = (1/dyDown)* ( kLeft*AUpDownLeft +kRight*AUpDownRight)
+                A[n,nDown]  = (1/dyDown)* ( kLeft*AUpDownLeft +kRight*AUpDownRight)
 
                 b[n] = 0
 
