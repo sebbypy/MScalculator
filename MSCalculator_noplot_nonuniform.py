@@ -46,7 +46,7 @@ def genMesh(*,eIsol,pMetal,wMetal,hMetal,shape,entreAxe):
         cum += e
 
     xticks.append(pMetal)
-    xticks.append(pMetal+wMetal)
+    xticks.append(pMetal+metalXspan)
 
     xticks = list(set(xticks))
     xticks.sort()    
