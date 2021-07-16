@@ -56,8 +56,8 @@ def genMesh(*,eIsol,pMetal,wMetal,hMetal,shape,entreAxe):
 
     #yticks management
     yticks = [0,
-              entreAxe/2-hMetal/2,
-              entreAxe/2+hMetal/2,
+              entreAxe/2-metalYspan/2,
+              entreAxe/2+metalYspan/2,
               entreAxe
               ]
     yticks = refineGloballyX(yticks,sizeOther)
