@@ -1,0 +1,830 @@
+ <!DOCTYPE html>
+<html>
+
+<head>
+<title>Calculateur Valeur U avec profilé métallique</title>
+<script src="https://cdn.plot.ly/plotly-2.2.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.17.0/full/pyodide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.min.js"></script>
+<script src="https://unpkg.com/jspdf-autotable@3.5.15/dist/jspdf.plugin.autotable.js"></script>
+<style>
+input[type=button], input[type=submit], select{
+  padding: 1px 1px;
+  margin: 1px 1px;
+  cursor: pointer;
+}
+input{width: auto;}
+
+#layersTable .right {text-align:center}
+
+</style>
+
+</head>
+
+<body>
+
+<script>
+
+function addRow(eValue = 2, lambdaValue = 0.2, cValue = "insulation",checked='') {
+	var table = document.getElementById( 'layersTable' );
+	var nRows = table.rows.length;
+	row = table.insertRow(-1);
+	cell1 = row.insertCell(0);
+	cell2 = row.insertCell(1);
+	cell3 = row.insertCell(2);
+	cell4 = row.insertCell(3);
+
+	cell1.innerHTML='<input type="number" min="0" id="e'+nRows.toString()+'"size="6" value="'+eValue.toString()+'" onchange="drawAll();return null;"/>'
+	cell2.innerHTML='<input type="number" min="0.010"id="t'+nRows.toString()+'" size="8" step="0.001" value="'+lambdaValue.toString()+'"/>'
+	cell3.innerHTML='<select id="m'+nRows.toString()+'" onchange="drawAll();return null"><option value="insulation">Isolant</option><option value="gypsum">Platre </option><option value="wood">Bois</option><option value="maconnerie">Maconnerie</option></select>'
+	cell4.innerHTML='<input type="checkbox" id="cb'+nRows.toString()+'" onchange="cbselected('+nRows.toString()+');" '+checked+'/>'
+	cell4.classList.add("right")
+
+	select = document.getElementById( "m"+nRows.toString() );
+	select.value=cValue,
+	drawAll();
+}
+
+function removeRow() {
+	var table = document.getElementById( 'layersTable' );
+	table.deleteRow(-1);
+	drawAll();
+}
+
+function cbselected(checkboxid) {
+	var table = document.getElementById( 'layersTable' );
+	var nRows = table.rows.length;
+	
+	for (let i=1; i<nRows; i+=1){
+		var cb = document.getElementById('cb'+i.toString());
+		
+		if (checkboxid != i){
+			cb.checked = false;
+		}
+		else{
+			cb.checked = true; //this way, it remains true if try to unclick --> always one remains clicked
+		}
+	}
+
+	console.log(checkboxid);
+}
+
+function getBridgedLayer(){
+
+	var table = document.getElementById( 'layersTable' );
+	var nRows = table.rows.length;
+	
+	for (let i=1; i<nRows; i+=1){
+		var cb = document.getElementById('cb'+i.toString());
+		
+		if (cb.checked){
+			return i;
+		}
+	}
+
+}
+
+function getLayersInfo(){
+	var table = document.getElementById( 'layersTable' );
+	var nRows = table.rows.length;
+
+	var layers = [];
+
+	for (let i=1; i<nRows; i+=1){
+		var thickness = document.getElementById('e'+i.toString()).value
+		var kappa     = document.getElementById('t'+i.toString()).value
+		var material  = document.getElementById('m'+i.toString()).value
+
+		//console.log(thickness,kappa,material)
+		
+		var layerJson = {};
+		layerJson['thickness']=thickness;
+		layerJson['lambda']=kappa;
+		layerJson['material']=material;
+		
+		layers.push(layerJson);
+
+	}
+	return layers;
+}
+
+function getCumThickness(){
+	var layers = getLayersInfo();
+	
+	var cumT = 0;
+	
+	layers.forEach(item => {cumT += parseFloat(item['thickness']) } );
+
+	return cumT
+}
+
+function getTheoriticalR(withRsiRse=false){
+	var layers = getLayersInfo();
+	var cumR = 0;
+	
+	layers.forEach(item => {cumR += parseFloat(item['thickness'])/100/parseFloat(item['lambda']) } );
+
+	if (withRsiRse){
+		bcs= getBoundaryConditions();
+		cumR+= 1/bcs['hi']+1/bcs['he'];
+	}
+	return cumR.toFixed(2);
+}
+
+
+function getMetalData(){
+	//var table = document.getElementById( 'metalTable' );
+
+	var data = {'shape':document.getElementById('MSshape').value,
+				'e':parseFloat(document.getElementById('MSe').value),
+				'h':parseFloat(document.getElementById('MSh').value),
+				'w':parseFloat(document.getElementById('MSw').value),
+				'p':parseFloat(document.getElementById('MSp').value),
+				'EA':parseFloat(document.getElementById('MSentreAxe').value)
+				};
+	//console.log(data);
+	
+	return data;		
+}
+
+function getBoundaryConditions(){
+
+	var data = {'hi':parseFloat(document.getElementById('hi').value),
+				'he':parseFloat(document.getElementById('he').value),
+				'Te':parseFloat(document.getElementById('Te').value),
+				'Ti':parseFloat(document.getElementById('Ti').value),
+				};
+				
+	console.log(data);
+	return data;
+}
+
+
+function getColors(){
+
+	return {'gypsum':'White',
+			'wood':'Brown',
+			'insulation':'Yellow',
+			'maconnerie':'Grey',
+			};
+}
+
+function drawAll(){
+
+	entreAxe = getMetalData()['EA'];
+	layerShapes = getLayersShape(entreAxe);
+	cumThickness=getCumThickness();
+	metalData = getMetalDrawing();
+
+	var layout = {
+		margin: {
+		l: 30,
+		r: 10,
+		b: 30,
+		t: 10,
+	  },
+		paper_bgcolor:"Aliceblue",
+		plot_bgcolor:"Aliceblue",
+
+		xaxis: {
+			range: [-1,cumThickness],
+			showgrid: false,
+			zeroline: false,
+			showline: false,
+			autotick: true,
+			tickmode: "array",
+			tickvals: [0,cumThickness],
+		  },
+		yaxis: {
+			range: [-1,entreAxe],
+			scaleanchor: "x",
+			scaleratio: 1,
+			showgrid: false,
+			zeroline: true,
+			showline: false,
+			autotick: true,
+			tickmode: "array",
+			tickvals: [0,entreAxe],
+		},
+		width: 300,
+		height: 800,
+		shapes: layerShapes
+	};
+
+	var metalTrace = {
+		x: metalData[0],
+		y: metalData[1],
+		mode: 'lines',
+		line: {
+			color: 'Red',
+			width: 4
+		}
+	}
+	
+	geometryPlot = document.getElementById('geometryPlot');
+	Plotly.newPlot(geometryPlot, [metalTrace], layout );
+}
+
+function getLayersShape(entreAxe=60){
+
+	var layers = getLayersInfo();
+	var rectangleShapes = []
+
+	var cumThickness = 0
+	var endThickness = 0
+
+	colors = getColors();
+
+	layers.forEach(item => {
+
+		endThickness = cumThickness+parseInt(item['thickness'],10)
+
+		//Filled Rectangle
+		var rect = {
+			type: 'rect',
+			x0: cumThickness,
+			y0: 0,
+			x1: endThickness,
+			y1: entreAxe,
+			line: {
+				color: 'rgba(0, 0,0, 1)',
+				width: 2
+			},
+			fillcolor: colors[item['material']],
+			layer: 'below'
+		};
+		rectangleShapes.push(rect);
+		cumThickness = endThickness;
+	}
+	);
+
+	return rectangleShapes;
+
+}
+
+function getMetalDrawing(){
+
+	metalData = getMetalData();
+
+	if (metalData['shape'] == 'C-shape'){
+
+		ystart = metalData['EA']/2 - metalData['h']/2;
+		x1 = metalData['p'];
+		y1 = ystart;
+		x2 = x1;
+		y2 = y1+metalData['h'];
+		x3 = x1+metalData['w'];
+		y3=y2
+		y4=y1
+		x4=x3
+	}
+	if (metalData['shape'] == 'U-shape'){
+
+		ystart = metalData['EA']/2  + metalData['w']/2;
+
+		x1 = metalData['p'] + metalData['h'];
+		y1 = ystart;
+
+		x2 = x1 - metalData['h'];
+		y2 = y1;
+
+		x3 = x2;
+		y3 = y2 - metalData['w']
+
+		x4=x1
+		y4=y3
+	}
+	console.log(x1)
+	
+	x=[x1,x2,x3,x4];
+	y=[y1,y2,y3,y4];
+	
+	return  [x,y]
+}
+
+async function loadMSCalculator(){
+	pyodide.runPython(await (await fetch('https://raw.githubusercontent.com/sebbypy/MScalculator/main/MSCalculator_noplot_nonuniform.py')).text());
+}
+
+
+async function loadAllPython(){
+
+	await loadPyodide({
+          indexURL : "https://cdn.jsdelivr.net/pyodide/v0.17.0/full/"
+        });
+
+	await pyodide.loadPackage('numpy');
+	await loadMSCalculator();
+
+}
+
+async function computeAndPlot(){
+
+	var dataToPlot = await compute();
+	Xvalues = dataToPlot[0];
+	Yvalues = dataToPlot[1];
+	Zvalues = dataToPlot[2];
+	
+	Rvalues = dataToPlot[3];
+	
+	
+	showRvalues(Rvalues);
+	plotTemperatureField(Xvalues,Yvalues,Zvalues);
+
+}
+
+function showRvalues(Rvalues){
+
+	document.getElementById("R1").innerHTML = Rvalues.get('R1').toPrecision(4);
+	document.getElementById("R2").innerHTML = Rvalues.get('R2').toPrecision(4);
+	document.getElementById("R3").innerHTML = Rvalues.get('R3').toPrecision(4);
+	document.getElementById("R4").innerHTML = Rvalues.get('R4').toPrecision(4);
+}
+
+
+async function compute(){
+
+	layers = getLayersInfo();
+	metal = getMetalData();
+	bcs = getBoundaryConditions();
+
+	//pas parameters as string
+	eIsol = [] 
+	kIsol = []
+	hMetal = metal['h']
+	pMetal = metal['p']
+	wMetal = metal['w']
+	eMetal = metal['e']
+	entreAxe = metal['EA']
+	shape = metal['shape']
+
+	bcs = getBoundaryConditions();
+
+	layers.forEach(item => { eIsol.push(parseFloat(item['thickness'])) })
+	layers.forEach(item => { kIsol.push(parseFloat(item['lambda'])) })
+
+	await pyodide.runPython(`
+
+import js
+
+eIsol = [x/100 for x in js.eIsol.to_py()]
+kIsol = js.kIsol.to_py()
+eMetal = js.eMetal/1000 #mm in js, m in py
+pMetal = js.pMetal/100  #cm to mm
+hMetal = js.hMetal/100  
+wMetal = js.wMetal/100
+shape = js.shape;
+entreAxe = js.entreAxe/100
+
+bcs = js.bcs.to_py()
+
+
+x,y,z,Rdict = multiLayer_hConv_MS(eIsol=eIsol,
+							kIsol=kIsol, 
+                            pMetal=pMetal, 
+                            wMetal = wMetal, 
+                            hMetal=hMetal,
+							eMetal = eMetal,
+							entreAxe = entreAxe,
+							hi=bcs['hi'],
+							he=bcs['he'],
+							Ti=bcs['Ti'],
+							Te=bcs['Te'],
+                            MStype=shape)
+							
+x=x*100 #back to cm
+y=y*100 #back to cm
+`)
+
+	var X=pyodide.globals.get('x').toJs();
+	var Y=pyodide.globals.get('y').toJs();
+	var Z=pyodide.globals.get('z').toJs();
+	var Rvals=pyodide.globals.get('Rdict').toJs();
+
+	//console.log(Rvals);
+
+	return [X,Y,Z,Rvals]
+}
+
+
+async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
+
+		metalData = getMetalData();
+		var entreAxe = metalData['EA'];
+		var cumThickness = getCumThickness();
+
+		var layout = {
+		margin: {
+		l: 30,
+		r: 10,
+		b: 30,
+		t: 10,
+		},
+		paper_bgcolor:"Aliceblue",
+		plot_bgcolor:"Aliceblue",
+		xaxis: {
+			range: [-1,cumThickness],
+			showgrid: false,
+			zeroline: false,
+			showline: false,
+			autotick: true,
+			tickmode: "array",
+			tickvals: [0,cumThickness],
+		  },
+		yaxis: {
+			range: [-1,entreAxe],
+			scaleanchor: "x",
+			scaleratio: 1,
+			showgrid: false,
+			zeroline: true,
+			showline: false,
+			autotick: true,
+			tickmode: "array",
+			tickvals: [0,entreAxe],
+		},
+		width: 400,
+		height: 800,
+		}
+
+	metalData = getMetalDrawing();
+
+	var metalTrace = {
+		x: metalData[0],
+		y: metalData[1],
+		mode: 'lines',
+		line: {
+			color: 'Black',
+			width: 2
+		}
+	}
+
+	var contour = {
+		x: Xvalues,
+		y: Yvalues,
+		z: Zvalues,
+		type: 'contour',
+		colorbar:{
+			thickness: 50,
+			thicknessmode: 'pixels'
+			}
+		}
+		
+	temperaturePlot = document.getElementById('temperaturePlot');
+	Plotly.newPlot(temperaturePlot, [contour,metalTrace], layout);
+
+
+}
+
+</script>
+
+<div style = "height:800px; width:750px; float:right;">
+	<div id="geometryPlot" style="height:800px; float:left; border:1px solid black;"></div>
+	<div id="temperaturePlot" style="height:800px; float:left; border:1px solid black;"></div>
+</div>
+
+<div id="layers" style="width: 50%">
+<h1>Calculateur Valeur U avec profilé métallique</h1>
+
+<h2>Insérer les couches</h2>
+
+<table id="layersTable">
+  <tr>
+    <th>Epaisseur [cm]</th>
+    <th>&#955; [W/mK]</th>
+	<th>Couleur</th>
+	<th>Associer le pont thermique à cette couche ?</th>
+  </tr>
+</table> 
+<input type="submit" value="Ajouter une couche" onclick="addRow();return null;">
+<input type="submit" value="Supprimer une couche" onclick="removeRow();return null;">
+
+</div>
+
+<div id="profile">
+<h2>Insérer les caractéristiques du profilé</h2>
+
+<table id="metalTable" textalign="left">
+  <tr>
+    <th style="text-align:left">Orientation</th>
+	<td><select id='MSshape' onchange="drawAll();return null;">
+			<option value='C-shape'>0°</option>
+			<option value='U-shape'>90°</option>
+		</select>
+	</td>
+  </tr>
+  <tr>
+    <th style="text-align:left">Largeur profilé [cm]</th>
+	<td><input type="number" min="1" value="5" step="1" id="MSw" onchange="drawAll();return null;" size="7">
+  </tr>
+    <tr>
+    <th style="text-align:left">Hauteur profilé [cm]</th>
+	<td><input type="number" min="1" value="3" step="1" id="MSh" onchange="drawAll();return null;" size="7">
+  </tr>
+  <tr>
+    <th style="text-align:left">Epaisseur du profilé [mm]</th>
+	<td><input type="number" min="0.1" value="0.6" step="0.1" id="MSe" size="7">
+  </tr>
+  <tr>
+    <th style="text-align:left">Position (depuis l'intérieur) [cm]</th>
+	<td><input type="number" min="0" value="2" step="1" id="MSp" onchange="drawAll();return null;" size="7">
+  </tr>
+  <tr>
+    <th style="text-align:left">Entre-axe [cm]</th>
+	<td><input type="number" min="10" value="60" step="5" id="MSentreAxe" onchange="drawAll();return null;" size="7">
+  </tr>
+</table> 
+</div>
+
+
+<div id="profile">
+<h2>Conditions aux limites</h2>
+
+<table id="boundaryConditionsTable" textalign="left">
+  <tr>
+    <th style="text-align:left">hi [W/m²K]</th>
+	<td><input type="number" value="10" step="1" id="hi" size="7"></td>
+  </tr>
+  <tr>
+    <th style="text-align:left">he [W/m²K]</th>
+	<td><input type="number" value="10" step="1" id="he" size="7"></td>
+  </tr>
+  <tr>
+    <th style="text-align:left">Ti [°C]</th>
+	<td><input type="number" value="20" step="1" id="Ti" size="7"></td>
+  </tr>
+  <tr>
+    <th style="text-align:left">Te [°C]</th>
+	<td><input type="number" value="0" step="1" id="Te"	size="7"></td>
+  </tr>
+</table> 
+</div>
+
+<div id="results_div">
+<h2>Résultats</h2>
+<table id="results_table" textalign="left">
+  <tr>
+    <th style="text-align:left">R<sub>tot,th</sub></th>
+	<td id="R1" style="min-width:50px"></td>
+	<td>[m²K/W]</td>
+	<td style="text-align:left;font-size:smaller">(Résistance totale théorique sans profilé métallique, avec Rsi et Rse)</td> 
+  </tr>
+  <tr>
+    <th style="text-align:left">R<sub>layers,th</sub></th>
+	<td id="R2" style="min-width:50px"></td>
+	<td>[m²K/W]</td>
+	<td style="text-align:left;font-size:smaller">(Résistance théorique de l'ensemble des couches sans profilé métallique, sans Rsi et Rse)</td>
+  </tr>
+  <tr>
+    <th style="text-align:left">R<sub>tot</sub></th>
+	<td id="R3"></td>
+	<td>[m²K/W]</td>
+	<td style="text-align:left;font-size:smaller">(Résistance totale avec profilé métallique, avec Rsi et Rse)</td>
+  </tr>
+  <tr>
+    <th style="text-align:left">R<sub>layers</sub></th>
+	<td id="R4"></td>
+	<td>[m²K/W]</td>
+	<td style="text-align:left;font-size:smaller">(Résistance de l'ensemble des couches avec profilé métallique, sans Rsi et Rse)</td>
+  </tr>
+</table>
+
+<input type="submit" value="Calculer" onclick="computeAndPlot();return null;">
+</div>
+
+<script>
+
+const getBase64FromUrl = async (url) => {
+  const data = await fetch(url);
+  const blob = await data.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(blob); 
+    reader.onloadend = () => {
+      const base64data = reader.result;   
+      resolve(base64data);
+    }
+  });
+}
+
+function getDateString(){
+	var today = new Date();
+	var dd = String(today.getDate()).padStart(2, '0');
+	var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+	var yyyy = today.getFullYear();
+	today = dd + '/' + mm+ '/' + yyyy;
+
+	return today;
+}
+
+async function addPlotlyImage(doc,plotlyPlot,xpos,ypos) {
+  
+	geoplot = document.getElementById(plotlyPlot);
+	await Plotly.toImage(plotlyPlot, { format: 'jpeg', width: 900, height: 1800 })
+		.then(
+             function(url)
+         {
+			doc.addImage(url,"JPEG",xpos,ypos,50,100);
+	    }
+         );
+  
+}
+
+
+async function genPDF(){
+
+    
+	// Default export is a4 paper, portrait, using millimeters for units
+	const doc = new jsPDF('a4');
+
+	doc.setFontSize(15);
+    
+	// shoud work excpeted that I cannot get png due to CORS
+	//var base64 = await getBase64FromUrl("https://www.coopenergie.be/images/Capturedcran2021-03-3018.24.36.png")
+
+	doc.setFillColor(32,32,32);
+	doc.rect(-1, -1, 220, 100/3, 'F');
+
+	var base64 = await getBase64FromUrl("https://raw.githubusercontent.com/sebbypy/MScalculator/main/coopEnergieBanner.jpg")
+	doc.addImage(base64,"JPEG",0,0,100,100/3.3)
+	//there are issues with PNG and acrobat reader
+
+
+	latestY = 100/3.3
+
+	doc.text("CoopEnergie - Calculateur valeur U avec profilé métallique", 20, latestY+20);
+
+	doc.setFontSize(12);
+
+	layers = getLayersInfo();
+
+	RLayers = parseFloat(document.getElementById('R4').innerHTML).toFixed(2);
+	Rtot = parseFloat(document.getElementById('R3').innerHTML).toFixed(2);
+    deltaR = parseFloat(Rtot)-parseFloat(getTheoriticalR(true));
+
+	bridgedLayer = getBridgedLayer();
+
+
+	layers.forEach( (x,index) => {x['resistance']=(x['thickness']/100/x['lambda']).toFixed(2); x['index']=index+1});
+
+
+	layers.forEach( (x,index) => {
+		
+		x['resistance2']=(x['thickness']/100/x['lambda']).toFixed(2); 
+		x['index']=index+1
+
+		if (x['index'] == bridgedLayer){
+			
+			x['resistance2'] = (parseFloat(x['resistance2']) + deltaR).toFixed(2);
+		}
+		}
+	);
+	
+	
+	layers.push({'thickness':getCumThickness(),'resistance':getTheoriticalR(),'resistance2':RLayers,'index':'Total (sans Rsi et Rse)'});
+	layers.push({'thickness':getCumThickness(),'resistance':getTheoriticalR(true),'resistance2':Rtot,'index':'Total(avec Rsi et Rse)'});
+	
+	
+	headers = [ { header: 'Couche', dataKey:'index'},
+	            { header: 'Epaisseur [cm]', dataKey: 'thickness' },
+				{ header: 'Conductivité thermique [W/mK]', dataKey: 'lambda' },
+				{ header: 'R théorique [m²K/w]', dataKey: 'resistance' },
+				{ header: 'R avec pont thermique [m²K/w]', dataKey: 'resistance2' }
+				]
+
+	// Couches
+	doc.text('Description des couches (de l\'intérieur vers l\'extérieur)',20,latestY+30)
+	doc.setFontSize(8);
+	doc.text('La ligne grisée est celle à laquelle le pont thermique a été appliqué',20,latestY+35)
+	doc.setFontSize(12);
+
+
+	doc.autoTable( {startY: latestY+40,
+					margin: {top:0,left:20},
+					body:layers,
+					columns:headers,
+					styles: {
+						halign: 'center',
+						cellWidth: 30
+					},
+					theme: 'grid',
+					headStyles:{
+						fillColor: [32, 32, 32]
+					},
+					columnStyles:{
+					 0: {cellWidth:40},
+					 2: {cellWidth:35},
+					 3: {cellWidth:35},
+					 4: {cellWidth:35},
+					},
+					didParseCell: function (data) {
+					  if (data.row.index === bridgedLayer-1) {
+						data.cell.styles.fillColor = [220, 220, 220]
+					  }
+					}
+					});
+
+	// Profile metallique
+	metalData = getMetalData();
+    
+    if (metalData['shape'] == 'C-shape'){
+        metalData['shape']='0°'
+    }
+    if (metalData['shape'] == 'U-shape'){
+        metalData['shape']='90°'
+    }
+    
+	headers = [ {header: 'Distance de la surface intérieure [cm]', dataKey:'p'},
+	            {header: 'Epaisseur [mm]', dataKey: 'e' },
+				{ header: 'Largeur [cm]', dataKey: 'w' },
+				{ header: 'Hauteur [cm]', dataKey: 'h' },
+				{ header: 'Orientation', dataKey: 'shape' },
+				]
+
+	let previousTableY = doc.previousAutoTable.finalY; 
+	doc.text('Caractéristiques de la structure métallique',20,previousTableY+10)
+	doc.autoTable({	startY: previousTableY+15,
+					margin: {top:0,left:20},
+					body: [metalData],
+					columns:headers,
+					styles: {
+						halign: 'center',
+						cellWidth: 30
+					},
+					theme: 'grid',
+					headStyles:{
+						fillColor: [32, 32, 32]
+					},
+					columnStyles:{
+					 0: {cellWidth:45}
+					}
+	
+					});
+
+
+	bcs = getBoundaryConditions();
+	headers = [ {header: 'hi [W/m²K]', dataKey:'hi'},
+	            {header: 'he [W/m²K]', dataKey: 'he' },
+				{ header: 'Ti [°C]', dataKey: 'Ti' },
+				{ header: 'Te [°C]', dataKey: 'Te' },
+				]
+
+	previousTableY = doc.previousAutoTable.finalY; 
+	doc.text('Conditions aux limites',20,previousTableY+10)
+	doc.autoTable({	startY: previousTableY+15,
+					margin: {top:0,left:20},
+					body: [bcs],
+					columns:headers,
+					styles: {
+						halign: 'center',
+						cellWidth: 30
+					},
+					theme: 'grid',
+					headStyles:{
+						fillColor: [32, 32, 32]
+						},
+					});
+
+	
+	previousTableY = doc.previousAutoTable.finalY; 
+
+	//RLayers = document.getElementById('R4').innerHTML;
+	//Rtot = document.getElementById('R3').innerHTML;
+
+	//doc.setFontSize(10);
+	//doc.text("R (sans Rsi et Rse) = "+RLayers,135,previousTableY+15);
+	//doc.text("R (avec Rsi et Rse) = "+Rtot,135,previousTableY+20);
+
+    //deltaR = parseFloat(Rtot)-parseFloat(getTheoriticalR(true))
+    
+    //+Rtot-getTheoriticalR(true)
+    //console.log("before addfont")
+    //console.log(deltaR)    
+
+    //doc.text("Delta R = "+deltaR,135,previousTableY+25)
+    //console.log("after addfont")
+
+	await addPlotlyImage(doc,'geometryPlot',20,previousTableY+5);
+	await addPlotlyImage(doc,'temperaturePlot',80,previousTableY+5);
+
+	doc.setFontSize(8);
+	doc.text("Document généré le "+getDateString(),150,290)
+
+	window.open(URL.createObjectURL(doc.output("blob")))
+
+	//doc.save("a4.pdf");
+}
+</script>
+
+
+<input type="submit" value="Générer rapport PDF" onclick="genPDF();return null;">
+
+
+<script>
+addRow(eValue=1,lambdaValue=0.2,cValue='gypsum');
+addRow(eValue=1,lambdaValue=0.13,cValue='wood');
+addRow(eValue=5,lambdaValue=0.035,cValue='insulation',checked='checked');
+loadAllPython();
+</script>
+
+</body>
+</html> 
