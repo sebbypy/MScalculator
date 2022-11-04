@@ -14,6 +14,7 @@ input[type=button], input[type=submit], select{
   cursor: pointer;
 }
 input{width: auto;}
+select{width:100px;}
 
 #layersTable .right {text-align:center}
 
@@ -115,7 +116,15 @@ function setAirLayer(layerid){
 				lambdaElement.value = '0.035';
 			
 			}
+			if (layerid == counter && item['type'] != 'air'){
+			   	colorElement.disabled = false;
+				lambdaElement.disabled = false;
+				colorElement.value = 'insulation';
+				lambdaElement.value = '0.035';
+			
+			}
 		}
+		
 		
 		counter+=1
 	}
@@ -355,7 +364,7 @@ function getMetalDrawing(){
 }
 
 async function loadMSCalculator(){
-	pyodide.runPython(await (await fetch('https://raw.githubusercontent.com/sebbypy/MScalculator/main/MSCalculator_noplot_nonuniform_refactorClass.py')).text());
+	pyodide.runPython(await (await fetch('https://raw.githubusercontent.com/sebbypy/MScalculator/main/python/MSCalculator.py')).text());
 }
 
 
