@@ -702,7 +702,7 @@ async function genPDF(){
 	doc.setFillColor(32,32,32);
 	doc.rect(-1, -1, 220, 100/3, 'F');
 
-	var base64 = await getBase64FromUrl("https://raw.githubusercontent.com/sebbypy/MScalculator/main/coopEnergieBanner.jpg")
+	var base64 = await getBase64FromUrl("https://raw.githubusercontent.com/sebbypy/MScalculator/main/externalRessources/coopEnergieBanner.jpg")
 	doc.addImage(base64,"JPEG",0,0,100,100/3.3)
 	//there are issues with PNG and acrobat reader
 
