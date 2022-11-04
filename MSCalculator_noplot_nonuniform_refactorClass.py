@@ -137,7 +137,12 @@ class MsSolver:
         heatFlux = self.computeWallHeatFlux()        
         Xuns,Yuns = self.getFlattenedXandY()
         
-        RvaluesDict = computeUandRValues(heatFlux,metalProps,boundaryConditions,self.npy,self.T,self.npoints,self.eIsol,self.kIsol,Xuns,Yuns)
+        if self.airLayerPosition != None:
+            hasAirLayer=True
+        else:
+            hasAirLayer=False
+        
+        RvaluesDict = computeUandRValues(heatFlux,metalProps,boundaryConditions,self.npy,self.T,self.npoints,self.eIsol,self.kIsol,Xuns,Yuns,hasAirLayer)
     
         return [Xuns,Yuns,self.T,RvaluesDict]
 
@@ -169,12 +174,9 @@ class MsSolver:
 
         if np.isnan(self.kIsol).any():      
             #it means it is an air layer
-            print("there is an air layer")
             self.airLayerPosition = np.where(np.isnan(self.kIsol))[0][0]
             self.kIsol[self.airLayerPosition] = 1000
         else:
-            print("there is NO air layer")
-
             self.airLayerPosition = None
     
         
@@ -1103,7 +1105,7 @@ class Mesher:
 
 
 
-def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIsol,kIsol,Xuns,Yuns):
+def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIsol,kIsol,Xuns,Yuns,hasAirLayer=False):
     
     
     Rsi = 1/boundaryConditions['hi']
@@ -1118,6 +1120,8 @@ def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIso
     
 
     R2 = np.sum(np.array(eIsol)/np.array(kIsol)) # sum of e/lambda
+    if hasAirLayer:
+        R2 += 0.18
     R1 = R2 + Rsi + Rse                          # incl Rsi and Rse
     R3 = Rglobal                                 # R with metal,, incl Rsi and Rse
     R4 = RLayer                                  # R with metal, solid layers only

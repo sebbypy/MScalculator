@@ -127,7 +127,16 @@ function getTheoriticalR(withRsiRse=false){
 	var layers = getLayersInfo();
 	var cumR = 0;
 	
-	layers.forEach(item => {cumR += parseFloat(item['thickness'])/100/parseFloat(item['lambda']) } );
+	layers.forEach(item => {
+	console.log("type",item['type']);
+	if (item['type']=='solid'){
+		cumR += parseFloat(item['thickness'])/100/parseFloat(item['lambda']); 
+		}
+	else{
+		cumR += 0.18;
+		}
+	} 
+	);
 
 	if (withRsiRse){
 		bcs= getBoundaryConditions();
@@ -400,7 +409,6 @@ async function compute(){
 	await pyodide.runPython(`
 
 import js
-import math
 eIsol = [x/100 for x in js.eIsol.to_py()]
 kIsol = js.kIsol.to_py()
 eMetal = js.eMetal/1000 #mm in js, m in py
@@ -411,13 +419,6 @@ shape = js.shape;
 entreAxe = js.entreAxe/100
 
 bcs = js.bcs.to_py()
-
-print(kIsol)
-print(math.isnan(kIsol[2]))
-import numpy as np
-
-print(np.nan in kIsol)
-           
 
 x,y,z,Rdict = MsSolver(eIsol = eIsol,
 						kIsol = kIsol.copy() , 
@@ -573,7 +574,7 @@ async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
   </tr>
     <tr>
     <th style="text-align:left">Hauteur profilé [cm]</th>
-	<td><input type="number" min="1" value="3" step="1" id="MSh" onchange="drawAll();return null;" size="7">
+	<td><input type="number" min="1" value="5" step="1" id="MSh" onchange="drawAll();return null;" size="7">
   </tr>
   <tr>
     <th style="text-align:left">Epaisseur du profilé [mm]</th>
@@ -719,13 +720,29 @@ async function genPDF(){
 	bridgedLayer = getBridgedLayer();
 
 
-	layers.forEach( (x,index) => {x['resistance']=(x['thickness']/100/x['lambda']).toFixed(2); x['index']=index+1});
+	layers.forEach( (x,index) => {
+	  if (x['type'] == 'solid'){
+	  
+			x['resistance']=(x['thickness']/100/x['lambda']).toFixed(2); 
+		}
+		else{
+			x['resistance']=0.18;
+			}
+		x['index']=index+1;
 
+	});
 
 	layers.forEach( (x,index) => {
 		
-		x['resistance2']=(x['thickness']/100/x['lambda']).toFixed(2); 
-		x['index']=index+1
+		if (x['type'] == 'solid'){
+	  
+			x['resistance2']=(x['thickness']/100/x['lambda']).toFixed(2); 
+			}
+		else{
+			x['resistance2']=0.18;
+			}
+	
+		x['index']=index+1;
 
 		if (x['index'] == bridgedLayer){
 			
@@ -878,6 +895,8 @@ async function genPDF(){
 addRow(eValue=1,lambdaValue=0.2,cValue='gypsum');
 addRow(eValue=1,lambdaValue=0.13,cValue='wood');
 addRow(eValue=5,lambdaValue=0.035,cValue='insulation',checked='checked');
+addRow(eValue=30,lambdaValue=1.5,cValue='maconnerie');
+
 loadAllPython();
 </script>
 
