@@ -164,14 +164,16 @@ class MsSolver:
         self.npoints = self.npx*self.npy
         
 
+
     def computeCellProperties(self):
-        
-        if np.nan in self.kIsol:       
+
+        if np.isnan(self.kIsol).any():      
             #it means it is an air layer
-            self.airLayerPosition = self.kIsol.index(np.nan)
+            self.airLayerPosition = np.where(np.isnan(self.kIsol))[0][0]
             self.kIsol[self.airLayerPosition] = 1000
         else:
             self.airLayerPosition = None
+    
         
         kI = self.computeNodesNeighbourConductivity()
         

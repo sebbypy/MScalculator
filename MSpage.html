@@ -29,14 +29,16 @@ function addRow(eValue = 2, lambdaValue = 0.2, cValue = "insulation",checked='')
 	var table = document.getElementById( 'layersTable' );
 	var nRows = table.rows.length;
 	row = table.insertRow(-1);
-	cell1 = row.insertCell(0);
-	cell2 = row.insertCell(1);
-	cell3 = row.insertCell(2);
-	cell4 = row.insertCell(3);
+	cell0 = row.insertCell(0);
+	cell1 = row.insertCell(1);
+	cell2 = row.insertCell(2);
+	cell3 = row.insertCell(3);
+	cell4 = row.insertCell(4);
 
+	cell0.innerHTML='<select id="type'+nRows.toString()+'" onchange="setAirLayer();return null"><option value="solid">Solide</option><option value="air">Air (R=0.18)</option></select>'
 	cell1.innerHTML='<input type="number" min="0" id="e'+nRows.toString()+'"size="6" value="'+eValue.toString()+'" onchange="drawAll();return null;"/>'
 	cell2.innerHTML='<input type="number" min="0.010"id="t'+nRows.toString()+'" size="8" step="0.001" value="'+lambdaValue.toString()+'"/>'
-	cell3.innerHTML='<select id="m'+nRows.toString()+'" onchange="drawAll();return null"><option value="insulation">Isolant</option><option value="gypsum">Platre </option><option value="wood">Bois</option><option value="maconnerie">Maconnerie</option></select>'
+	cell3.innerHTML='<select id="m'+nRows.toString()+'" onchange="drawAll();return null"><option value="insulation">Isolant</option><option value="gypsum">Platre </option><option value="wood">Bois</option><option value="maconnerie">Maconnerie</option><option value="air">Air</option></select>'
 	cell4.innerHTML='<input type="checkbox" id="cb'+nRows.toString()+'" onchange="cbselected('+nRows.toString()+');" '+checked+'/>'
 	cell4.classList.add("right")
 
@@ -44,6 +46,7 @@ function addRow(eValue = 2, lambdaValue = 0.2, cValue = "insulation",checked='')
 	select.value=cValue,
 	drawAll();
 }
+
 
 function removeRow() {
 	var table = document.getElementById( 'layersTable' );
@@ -91,6 +94,7 @@ function getLayersInfo(){
 	var layers = [];
 
 	for (let i=1; i<nRows; i+=1){
+		var type = document.getElementById('type'+i.toString()).value
 		var thickness = document.getElementById('e'+i.toString()).value
 		var kappa     = document.getElementById('t'+i.toString()).value
 		var material  = document.getElementById('m'+i.toString()).value
@@ -98,6 +102,7 @@ function getLayersInfo(){
 		//console.log(thickness,kappa,material)
 		
 		var layerJson = {};
+		layerJson['type']= type;
 		layerJson['thickness']=thickness;
 		layerJson['lambda']=kappa;
 		layerJson['material']=material;
@@ -166,6 +171,7 @@ function getColors(){
 			'wood':'Brown',
 			'insulation':'Yellow',
 			'maconnerie':'Grey',
+			'air':'lightblue'
 			};
 }
 
@@ -223,6 +229,34 @@ function drawAll(){
 	
 	geometryPlot = document.getElementById('geometryPlot');
 	Plotly.newPlot(geometryPlot, [metalTrace], layout );
+}
+
+function setAirLayer(){
+
+	var layers = getLayersInfo();
+	var counter=1;
+	layers.forEach(item => {
+		colorElement = document.getElementById('m'+counter.toString());
+		lambdaElement = document.getElementById('t'+counter.toString());
+		
+		if (item['type'] == 'air'){
+			colorElement.value = 'air';
+			lambdaElement.value = NaN;
+			colorElement.disabled = true;
+			lambdaElement.disabled = true;
+			
+			}
+		else {
+			//colorElement.value = 'insulation'
+			colorElement.disabled = false;
+			lambdaElement.disabled = false;
+			//lambdaElement.value = '0.035';
+			}
+		
+		counter+=1
+	}
+	);
+	drawAll()
 }
 
 function getLayersShape(entreAxe=60){
@@ -303,7 +337,7 @@ function getMetalDrawing(){
 }
 
 async function loadMSCalculator(){
-	pyodide.runPython(await (await fetch('https://raw.githubusercontent.com/sebbypy/MScalculator/main/MSCalculator_noplot_nonuniform.py')).text());
+	pyodide.runPython(await (await fetch('https://raw.githubusercontent.com/sebbypy/MScalculator/main/MSCalculator_noplot_nonuniform_refactorClass.py')).text());
 }
 
 
@@ -366,7 +400,7 @@ async function compute(){
 	await pyodide.runPython(`
 
 import js
-
+import math
 eIsol = [x/100 for x in js.eIsol.to_py()]
 kIsol = js.kIsol.to_py()
 eMetal = js.eMetal/1000 #mm in js, m in py
@@ -378,8 +412,28 @@ entreAxe = js.entreAxe/100
 
 bcs = js.bcs.to_py()
 
+print(kIsol)
+print(math.isnan(kIsol[2]))
+import numpy as np
 
-x,y,z,Rdict = multiLayer_hConv_MS(eIsol=eIsol,
+print(np.nan in kIsol)
+           
+
+x,y,z,Rdict = MsSolver(eIsol = eIsol,
+						kIsol = kIsol.copy() , 
+						pMetal=pMetal , 
+						wMetal = wMetal, 
+						hMetal = hMetal, 
+						entreAxe = entreAxe,
+						kMetal = 50, 
+						eMetal = eMetal, 
+						hi=bcs['hi'],
+						he=bcs['he'],
+						Ti=bcs['Ti'],
+						Te=bcs['Te'],                         
+						MStype=shape).solve()
+
+"""x,y,z,Rdict = multiLayer_hConv_MS(eIsol=eIsol,
 							kIsol=kIsol, 
                             pMetal=pMetal, 
                             wMetal = wMetal, 
@@ -390,7 +444,7 @@ x,y,z,Rdict = multiLayer_hConv_MS(eIsol=eIsol,
 							he=bcs['he'],
 							Ti=bcs['Ti'],
 							Te=bcs['Te'],
-                            MStype=shape)
+                            MStype=shape)"""
 							
 x=x*100 #back to cm
 y=y*100 #back to cm
@@ -489,6 +543,7 @@ async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
 
 <table id="layersTable">
   <tr>
+    <th>Type</th>
     <th>Epaisseur [cm]</th>
     <th>&#955; [W/mK]</th>
 	<th>Couleur</th>
