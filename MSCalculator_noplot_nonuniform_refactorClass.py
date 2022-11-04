@@ -169,9 +169,12 @@ class MsSolver:
 
         if np.isnan(self.kIsol).any():      
             #it means it is an air layer
+            print("there is an air layer")
             self.airLayerPosition = np.where(np.isnan(self.kIsol))[0][0]
             self.kIsol[self.airLayerPosition] = 1000
         else:
+            print("there is NO air layer")
+
             self.airLayerPosition = None
     
         
