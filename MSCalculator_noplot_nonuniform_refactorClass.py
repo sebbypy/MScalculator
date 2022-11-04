@@ -1,107 +1,28 @@
-# -*- coding: utf-8 -*-
 """
-Created on Fri Jul  9 09:35:28 2021
+2D calculator for thermal bridges of metallic profiles in walls
 
-@author: spec
+The calculation is based on a finite difference method for the 2D calculation
+
+The heat conduction in the metallic structure is based on a 1-D finite
+difference along the path of the metallic profile
+
+The metal profile is assumed sufficiently thin for its thickness to be neglected
+in the 2D calculation. 
+
+Fluxes through the metallic structure are added as additional fluxes in the 2D 
+calculation. 
+
 """
-
-#METAL STUD 2d SOLVER
 
 import numpy as np
-    
-import sys
-#Non uniform version to have an automatic mesh with variable step size. 
 
-#Imagined mesh rules:
-# max .5 cm on an area of twice the size of the MS profile
-# 1 cm elsewhere or even more in the X direct
-# handle mm thickness. 
-
-
-
-
-def refineGloballyX(inputTicks,maxdx):
-   
-    pointsToAdd=[]
-    
-
-    #print(inputTicks)
-    
-    xprev=0
-    for xpos in inputTicks:
-        if (xpos==0):
-            continue
-        
-        pointsToAdd += refineInterval(xprev,xpos,maxdx)
-        xprev=xpos
-        
-    outputTicks = inputTicks + pointsToAdd
-    outputTicks.sort()
-    
-    return outputTicks
-
-def refineMS(inputTicks,pMetal,dxMetal,maxdx):
-    
-    pointsToAdd=[]
-    
-    xprev=0
-    for xpos in inputTicks:
-        if (xpos==0):
-            continue
-    
-        if ( isInMetalStudArea(xprev,pMetal,dxMetal) or isInMetalStudArea(xpos,pMetal,dxMetal)):    
-            pointsToAdd += refineInterval(xprev,xpos,maxdx)
-
-        xprev=xpos
-
-    
-    outputTicks = inputTicks + pointsToAdd
-    outputTicks.sort()
-    
-    return outputTicks
-    
-    
-
-def refineInterval(xstart,xend,maxdx):
-
-    tol=1e-4
-       
-    dx = xend-xstart   
-    
-    numberOfIntervals = int(np.ceil( (dx-tol)/maxdx ))
-    
-    if (numberOfIntervals==0):
-        numberOfIntervals=1
-    
-    numberOfPointsToAdd = numberOfIntervals-1
-    
-    newdx = dx/numberOfIntervals
-
-    newPoints=[]
-    
-    for newPointI in range(numberOfPointsToAdd):
-        newPoints.append(xstart + (newPointI+1)*newdx)
-
-    return newPoints
-
-    
-
-def isInMetalStudArea(x,pMetal,spanMetal):
-      
-    margin = spanMetal/2
-    
-    if (  x > pMetal - margin and x <= pMetal + spanMetal +margin ):
-        return True
-    
-    else:
-        return False
 
 
 class MsSolver:
     
-    def __init__(self,*,eIsol = [0.2] , kIsol=[0.035], pMetal=0.0, wMetal = 0.05, hMetal = 0.05, entreAxe = 0.6, kMetal = 50, eMetal=6e-4, hi=10, he=10, MStype='U-shape',Ti=20,Te=0,ResistanceAirLayer=0.18):
+    def __init__(self,*,layersThickness = [0.2] , layersConductivity=[0.035], pMetal=0.0, wMetal = 0.05, hMetal = 0.05, entreAxe = 0.6, kMetal = 50, eMetal=6e-4, hi=10, he=10, MStype='U-shape',Ti=20,Te=0,ResistanceAirLayer=0.18):
         
-        self.eIsol=eIsol
+        self.layersThickness=layersThickness
         self.pMetal=pMetal
         self.wMetal=wMetal
         self.entreAxe = entreAxe
@@ -109,7 +30,7 @@ class MsSolver:
         self.eMetal = eMetal
         self.hMetal = hMetal
         self.MStype = MStype
-        self.kIsol=kIsol
+        self.layersConductivity=layersConductivity
 
 
         self.hi = hi
@@ -117,7 +38,7 @@ class MsSolver:
         self.Ti = Ti
         self.Te = Te
         
-        self.ResitanceAirLayer =  ResistanceAirLayer
+        self.ResistanceAirLayer =  ResistanceAirLayer
 
     
     def solve(self):
@@ -142,7 +63,7 @@ class MsSolver:
         else:
             hasAirLayer=False
         
-        RvaluesDict = computeUandRValues(heatFlux,metalProps,boundaryConditions,self.npy,self.T,self.npoints,self.eIsol,self.kIsol,Xuns,Yuns,hasAirLayer)
+        RvaluesDict = computeUandRValues(heatFlux,metalProps,boundaryConditions,self.npy,self.T,self.npoints,self.layersThickness,self.layersConductivity,Xuns,Yuns,hasAirLayer)
     
         return [Xuns,Yuns,self.T,RvaluesDict]
 
@@ -151,13 +72,13 @@ class MsSolver:
     
     def genMesh(self):
           
-        self.MeshManager = Mesher(eIsol = self.eIsol,
+        self.MeshManager = Mesher(layersThickness = self.layersThickness,
                                pMetal = self.pMetal,
                                hMetal = self.hMetal,
                                wMetal = self.wMetal,
                                entreAxe = self.entreAxe,
                                MStype = self.MStype,
-                               kIsol = self.kIsol)
+                               layersConductivity = self.layersConductivity)
         
         xticks,yticks = self.MeshManager.genMesh()
                 
@@ -172,10 +93,10 @@ class MsSolver:
 
     def computeCellProperties(self):
 
-        if np.isnan(self.kIsol).any():      
+        if np.isnan(self.layersConductivity).any():      
             #it means it is an air layer
-            self.airLayerPosition = np.where(np.isnan(self.kIsol))[0][0]
-            self.kIsol[self.airLayerPosition] = 1000
+            self.airLayerPosition = np.where(np.isnan(self.layersConductivity))[0][0]
+            self.layersConductivity[self.airLayerPosition] = 1000
         else:
             self.airLayerPosition = None
     
@@ -223,7 +144,7 @@ class MsSolver:
         if (self.airLayerPosition==None):
             return nodeTypes
     
-        for e,k in zip(self.eIsol,self.kIsol):
+        for e,k in zip(self.layersThickness,self.layersConductivity):
     
             eCumulated+=e
     
@@ -256,12 +177,12 @@ class MsSolver:
         xarray = np.array(self.xticks)
         yarray = np.array(self.yticks)
         
-        kI=np.zeros((self.npx,self.npy,4))+self.kIsol[0] #col 0: left value, col1: right value
+        kI=np.zeros((self.npx,self.npy,4))+self.layersConductivity[0] #col 0: left value, col1: right value
         
         eCumulated=0
         previousPivot = 0
     
-        for e,k in zip(self.eIsol,self.kIsol):
+        for e,k in zip(self.layersThickness,self.layersConductivity):
     
             eCumulated+=e
     
@@ -343,7 +264,7 @@ class MsSolver:
 
         #MS_ids,nMSNodes,xMetal,yMetal = mapMetalNodes(self.xticks,self.yticks,self.MStype,self.wMetal,self.hMetal,self.pMetal) # table that contains -1 if nothing special or a null or positive id  if MS
         
-        hair= 1/(self.ResitanceAirLayer/2)
+        hair= 1/(self.ResistanceAirLayer/2)
 
         for i in range(self.npx):
             
@@ -734,20 +655,20 @@ class MsSolver:
 
 class Mesher:
     
-    def __init__(self,*,eIsol,pMetal,wMetal,hMetal,entreAxe,MStype,kIsol):
+    def __init__(self,*,layersThickness,pMetal,wMetal,hMetal,entreAxe,MStype,layersConductivity):
 
-        self.eIsol=eIsol
+        self.layersThickness=layersThickness
         self.pMetal=pMetal
         self.wMetal=wMetal
         self.entreAxe = entreAxe
         self.hMetal = hMetal
         self.MStype = MStype
-        self.kIsol=kIsol
+        self.layersConductivity=layersConductivity
 
 
     def genMesh(self):
         
-          #def genMesh(*,eIsol,pMetal,wMetal,hMetal,shape,entreAxe):
+          #def genMesh(*,layersThickness,pMetal,wMetal,hMetal,shape,entreAxe):
     
         sizeMS = 5e-3
         sizeOther = 2e-2
@@ -765,7 +686,7 @@ class Mesher:
         
         xticks=[0]
         cum=0
-        for e in self.eIsol:
+        for e in self.layersThickness:
             #xticks.append(cum+e/2)
             xticks.append(cum+e)
             cum += e
@@ -775,8 +696,8 @@ class Mesher:
         xticks = list(set(xticks))
         
         xticks.sort()    
-        xticks = refineGloballyX(xticks,sizeOther)
-        xticks = refineMS(xticks,self.pMetal,metalXspan,sizeMS)
+        xticks = self.refineGloballyX(xticks,sizeOther)
+        xticks = self.refineMS(xticks,self.pMetal,metalXspan,sizeMS)
         
         
         #yticks management
@@ -785,8 +706,8 @@ class Mesher:
                   self.entreAxe/2+metalYspan/2,
                   self.entreAxe
                   ]
-        yticks = refineGloballyX(yticks,sizeOther)
-        yticks = refineMS(yticks,(self.entreAxe-metalYspan)/2,metalYspan,sizeMS)
+        yticks = self.refineGloballyX(yticks,sizeOther)
+        yticks = self.refineMS(yticks,(self.entreAxe-metalYspan)/2,metalYspan,sizeMS)
 
         self.xticks = np.array(xticks)
         self.yticks = np.array(yticks)
@@ -809,6 +730,83 @@ class Mesher:
         self.MetalNodesIdMatrix = ids
            
         return ids,nNodes,xMS,yMS
+
+
+    def refineGloballyX(self,inputTicks,maxdx):
+       
+        pointsToAdd=[]
+        
+    
+        #print(inputTicks)
+        
+        xprev=0
+        for xpos in inputTicks:
+            if (xpos==0):
+                continue
+            
+            pointsToAdd += self.refineInterval(xprev,xpos,maxdx)
+            xprev=xpos
+            
+        outputTicks = inputTicks + pointsToAdd
+        outputTicks.sort()
+        
+        return outputTicks
+
+    def refineMS(self,inputTicks,pMetal,dxMetal,maxdx):
+        
+        pointsToAdd=[]
+        
+        xprev=0
+        for xpos in inputTicks:
+            if (xpos==0):
+                continue
+        
+            if ( self.isInMetalStructureArea(xprev,pMetal,dxMetal) or self.isInMetalStructureArea(xpos,pMetal,dxMetal)):    
+                pointsToAdd += self.refineInterval(xprev,xpos,maxdx)
+    
+            xprev=xpos
+    
+        
+        outputTicks = inputTicks + pointsToAdd
+        outputTicks.sort()
+        
+        return outputTicks
+    
+    
+
+    def refineInterval(self,xstart,xend,maxdx):
+    
+        tol=1e-4
+           
+        dx = xend-xstart   
+        
+        numberOfIntervals = int(np.ceil( (dx-tol)/maxdx ))
+        
+        if (numberOfIntervals==0):
+            numberOfIntervals=1
+        
+        numberOfPointsToAdd = numberOfIntervals-1
+        
+        newdx = dx/numberOfIntervals
+    
+        newPoints=[]
+        
+        for newPointI in range(numberOfPointsToAdd):
+            newPoints.append(xstart + (newPointI+1)*newdx)
+    
+        return newPoints
+    
+        
+    
+    def isInMetalStructureArea(self,x,pMetal,spanMetal):
+          
+        margin = spanMetal/2
+        
+        if (  x > pMetal - margin and x <= pMetal + spanMetal +margin ):
+            return True
+        
+        else:
+            return False
 
 
 
@@ -1105,7 +1103,7 @@ class Mesher:
 
 
 
-def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIsol,kIsol,Xuns,Yuns,hasAirLayer=False):
+def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,layersThickness,layersConductivity,Xuns,Yuns,hasAirLayer=False):
     
     
     Rsi = 1/boundaryConditions['hi']
@@ -1119,7 +1117,7 @@ def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,eIso
     ULayer = 1/RLayer
     
 
-    R2 = np.sum(np.array(eIsol)/np.array(kIsol)) # sum of e/lambda
+    R2 = np.sum(np.array(layersThickness)/np.array(layersConductivity)) # sum of e/lambda
     if hasAirLayer:
         R2 += 0.18
     R1 = R2 + Rsi + Rse                          # incl Rsi and Rse
@@ -1163,14 +1161,12 @@ if __name__ == '__main__':
     metalProps = {'kMetal':kMetal,'eMetal':eMetal,'entreAxe':entreAxe,'shape':shape,'pMetal':pMetal,'hMetal':hMetal,'wMetal':wMetal}   
     boundaryConditions={'Ti':Ti,'Te':Te,'hi':hi,'he':he}
     
-    eIsol = [0.01,0.02,0.05,0.09,0.05]
-    kIsol=[0.20,0.13,0.035,0.035,1.5]
+    layersThickness = [0.01,0.02,0.05,0.09,0.05]
+    layersConductivity=[0.20,0.13,0.035,0.035,1.5]
     
-    #
-    #X,Y,T,Rdict = multiLayer_hConv_MS(eIsol = eIsol,kIsol = kIsol , pMetal=pMetal , wMetal = wMetal, hMetal = hMetal, entreAxe = entreAxe,kMetal = kMetal, eMetal = eMetal, hi=hi, he=he, MStype=shape,Ti=Ti,Te=Te)
 
-    X,Y,T,Rdict = MsSolver(eIsol = eIsol,
-                               kIsol = kIsol , 
+    X,Y,T,Rdict = MsSolver(layersThickness = layersThickness,
+                               layersConductivity = layersConductivity , 
                                pMetal=pMetal , 
                                wMetal = wMetal, 
                                hMetal = hMetal, 
@@ -1183,5 +1179,6 @@ if __name__ == '__main__':
                                Ti=Ti,
                                Te=Te).solve()
 
-    #X,Y,T,Rdict = multiLayer_hConv_MS(eIsol = eIsol,kIsol = kIsol , pMetal=pMetal , wMetal = wMetal, hMetal = hMetal, entreAxe = entreAxe,kMetal = kMetal, eMetal = 0, hi=hi, he=he, MStype=shape,Ti=Ti,Te=Te,airLayerPosition=2)
+
+
 
