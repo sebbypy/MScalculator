@@ -35,7 +35,7 @@ function addRow(eValue = 2, lambdaValue = 0.2, cValue = "insulation",checked='')
 	cell3 = row.insertCell(3);
 	cell4 = row.insertCell(4);
 
-	cell0.innerHTML='<select id="type'+nRows.toString()+'" onchange="setAirLayer();return null"><option value="solid">Solide</option><option value="air">Air (R=0.18)</option></select>'
+	cell0.innerHTML='<select id="type'+nRows.toString()+'" onchange="setAirLayer('+nRows.toString()+');return null"><option value="solid">Solide</option><option value="air">Air (R=0.18)</option></select>'
 	cell1.innerHTML='<input type="number" min="0" id="e'+nRows.toString()+'"size="6" value="'+eValue.toString()+'" onchange="drawAll();return null;"/>'
 	cell2.innerHTML='<input type="number" min="0.010"id="t'+nRows.toString()+'" size="8" step="0.001" value="'+lambdaValue.toString()+'"/>'
 	cell3.innerHTML='<select id="m'+nRows.toString()+'" onchange="drawAll();return null"><option value="insulation">Isolant</option><option value="gypsum">Platre </option><option value="wood">Bois</option><option value="maconnerie">Maconnerie</option><option value="air">Air</option></select>'
@@ -72,6 +72,7 @@ function cbselected(checkboxid) {
 	console.log(checkboxid);
 }
 
+
 function getBridgedLayer(){
 
 	var table = document.getElementById( 'layersTable' );
@@ -86,6 +87,42 @@ function getBridgedLayer(){
 	}
 
 }
+
+
+function setAirLayer(layerid){
+
+	var layers = getLayersInfo();
+	var counter=1;
+	layers.forEach(item => {
+		colorElement = document.getElementById('m'+counter.toString());
+		lambdaElement = document.getElementById('t'+counter.toString());
+		typeElement = document.getElementById('type'+counter.toString());
+		
+		if (layerid == counter && item['type'] == 'air'){
+			colorElement.value = 'air';
+			lambdaElement.value = NaN;
+			colorElement.disabled = true;
+			lambdaElement.disabled = true;
+			
+			}
+		else {
+			if (layerid != counter && item['type'] == 'air'){
+				typeElement.value = 'solid'
+				colorElement.value = 'insulation'
+				//colorElement.value = 'insulation'
+				colorElement.disabled = false;
+				lambdaElement.disabled = false;
+				lambdaElement.value = '0.035';
+			
+			}
+		}
+		
+		counter+=1
+	}
+	);
+	drawAll()
+}
+
 
 function getLayersInfo(){
 	var table = document.getElementById( 'layersTable' );
@@ -240,34 +277,6 @@ function drawAll(){
 	Plotly.newPlot(geometryPlot, [metalTrace], layout );
 }
 
-function setAirLayer(){
-
-	var layers = getLayersInfo();
-	var counter=1;
-	layers.forEach(item => {
-		colorElement = document.getElementById('m'+counter.toString());
-		lambdaElement = document.getElementById('t'+counter.toString());
-		
-		if (item['type'] == 'air'){
-			colorElement.value = 'air';
-			lambdaElement.value = NaN;
-			colorElement.disabled = true;
-			lambdaElement.disabled = true;
-			
-			}
-		else {
-			//colorElement.value = 'insulation'
-			colorElement.disabled = false;
-			lambdaElement.disabled = false;
-			//lambdaElement.value = '0.035';
-			}
-		
-		counter+=1
-	}
-	);
-	drawAll()
-}
-
 function getLayersShape(entreAxe=60){
 
 	var layers = getLayersInfo();
@@ -367,7 +376,6 @@ async function computeAndPlot(){
 	Xvalues = dataToPlot[0];
 	Yvalues = dataToPlot[1];
 	Zvalues = dataToPlot[2];
-	
 	Rvalues = dataToPlot[3];
 	
 	
@@ -378,10 +386,10 @@ async function computeAndPlot(){
 
 function showRvalues(Rvalues){
 
-	document.getElementById("R1").innerHTML = Rvalues.get('R1').toPrecision(4);
-	document.getElementById("R2").innerHTML = Rvalues.get('R2').toPrecision(4);
-	document.getElementById("R3").innerHTML = Rvalues.get('R3').toPrecision(4);
-	document.getElementById("R4").innerHTML = Rvalues.get('R4').toPrecision(4);
+	document.getElementById("R1").innerHTML = Rvalues.get('R1').toPrecision(3);
+	document.getElementById("R2").innerHTML = Rvalues.get('R2').toPrecision(3);
+	document.getElementById("R3").innerHTML = Rvalues.get('R3').toPrecision(3);
+	document.getElementById("R4").innerHTML = Rvalues.get('R4').toPrecision(3);
 }
 
 
@@ -420,32 +428,26 @@ entreAxe = js.entreAxe/100
 
 bcs = js.bcs.to_py()
 
-x,y,z,Rdict = MsSolver(eIsol = eIsol,
-						kIsol = kIsol.copy() , 
-						pMetal=pMetal , 
-						wMetal = wMetal, 
-						hMetal = hMetal, 
-						entreAxe = entreAxe,
-						kMetal = 50, 
-						eMetal = eMetal, 
-						hi=bcs['hi'],
-						he=bcs['he'],
-						Ti=bcs['Ti'],
-						Te=bcs['Te'],                         
-						MStype=shape).solve()
+solver = MsSolver(layersThickness = eIsol,
+					layersConductivity = kIsol.copy() , 
+					pMetal=pMetal , 
+					wMetal = wMetal, 
+					hMetal = hMetal, 
+					entreAxe = entreAxe,
+					kMetal = 50, 
+					eMetal = eMetal, 
+					hi=bcs['hi'],
+					he=bcs['he'],
+					Ti=bcs['Ti'],
+					Te=bcs['Te'],                         
+					MStype=shape
+					)
+					
+solver.solve()
+TemperatureField = solver.T
+x,y = solver.getFlattenedXandY()
+Rvalues = solver.computeUandRValues()
 
-"""x,y,z,Rdict = multiLayer_hConv_MS(eIsol=eIsol,
-							kIsol=kIsol, 
-                            pMetal=pMetal, 
-                            wMetal = wMetal, 
-                            hMetal=hMetal,
-							eMetal = eMetal,
-							entreAxe = entreAxe,
-							hi=bcs['hi'],
-							he=bcs['he'],
-							Ti=bcs['Ti'],
-							Te=bcs['Te'],
-                            MStype=shape)"""
 							
 x=x*100 #back to cm
 y=y*100 #back to cm
@@ -453,8 +455,8 @@ y=y*100 #back to cm
 
 	var X=pyodide.globals.get('x').toJs();
 	var Y=pyodide.globals.get('y').toJs();
-	var Z=pyodide.globals.get('z').toJs();
-	var Rvals=pyodide.globals.get('Rdict').toJs();
+	var Z=pyodide.globals.get('TemperatureField').toJs();
+	var Rvals=pyodide.globals.get('Rvalues').toJs();
 
 	//console.log(Rvals);
 

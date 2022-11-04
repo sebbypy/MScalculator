@@ -56,6 +56,8 @@ class MsSolver:
         
         self.ResistanceAirLayer =  ResistanceAirLayer
 
+        self.T = None
+
     
     def solve(self):
         
@@ -67,16 +69,7 @@ class MsSolver:
         self.T = np.linalg.solve(self.A, self.b)
     
 
-
-        Xuns,Yuns = self.getFlattenedXandY()
-        
-
-        metalProps = {'kMetal':self.kMetal,'eMetal':self.eMetal,'entreAxe':self.entreAxe}   
-        boundaryConditions={'Ti':self.Ti,'Te':self.Te,'hi':self.hi,'he':self.he}
-        
-        RvaluesDict = self.computeUandRValues()
-    
-        return [Xuns,Yuns,self.T,RvaluesDict]
+        return    
 
         
     
