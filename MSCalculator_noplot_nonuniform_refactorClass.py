@@ -20,9 +20,26 @@ import numpy as np
 
 class MsSolver:
     
-    def __init__(self,*,layersThickness = [0.2] , layersConductivity=[0.035], pMetal=0.0, wMetal = 0.05, hMetal = 0.05, entreAxe = 0.6, kMetal = 50, eMetal=6e-4, hi=10, he=10, MStype='U-shape',Ti=20,Te=0,ResistanceAirLayer=0.18):
+    def __init__(self,*,
+                 layersThickness = [0.2] , 
+                 layersConductivity=[0.035], 
+                 pMetal=0.0, 
+                 wMetal = 0.05, 
+                 hMetal = 0.05, 
+                 entreAxe = 0.6, 
+                 kMetal = 50, 
+                 eMetal=6e-4, 
+                 hi=10, 
+                 he=10, 
+                 MStype='U-shape',
+                 Ti=20,
+                 Te=0,
+                 ResistanceAirLayer=0.18):
         
+
         self.layersThickness=layersThickness
+        self.layersConductivity=layersConductivity
+
         self.pMetal=pMetal
         self.wMetal=wMetal
         self.entreAxe = entreAxe
@@ -30,7 +47,6 @@ class MsSolver:
         self.eMetal = eMetal
         self.hMetal = hMetal
         self.MStype = MStype
-        self.layersConductivity=layersConductivity
 
 
         self.hi = hi
@@ -51,23 +67,17 @@ class MsSolver:
         self.T = np.linalg.solve(self.A, self.b)
     
 
-        
-        metalProps = {'kMetal':self.kMetal,'eMetal':self.eMetal,'entreAxe':self.entreAxe}   
-        boundaryConditions={'Ti':self.Ti,'Te':self.Te,'hi':self.hi,'he':self.he}
 
-        heatFlux = self.computeWallHeatFlux()        
         Xuns,Yuns = self.getFlattenedXandY()
         
-        if self.airLayerPosition != None:
-            hasAirLayer=True
-        else:
-            hasAirLayer=False
+
+        metalProps = {'kMetal':self.kMetal,'eMetal':self.eMetal,'entreAxe':self.entreAxe}   
+        boundaryConditions={'Ti':self.Ti,'Te':self.Te,'hi':self.hi,'he':self.he}
         
-        RvaluesDict = computeUandRValues(heatFlux,metalProps,boundaryConditions,self.npy,self.T,self.npoints,self.layersThickness,self.layersConductivity,Xuns,Yuns,hasAirLayer)
+        RvaluesDict = self.computeUandRValues()
     
         return [Xuns,Yuns,self.T,RvaluesDict]
 
-        
         
     
     def genMesh(self):
@@ -653,6 +663,53 @@ class MsSolver:
         return Xuns,Yuns        
 
 
+    def computeUandRValues(self):
+    
+    
+        heatFlux = self.computeWallHeatFlux()        
+
+
+        if self.airLayerPosition != None:
+            hasAirLayer = True
+        else:
+            hasAirLayer = False
+
+    
+        Rsi = 1/self.hi
+        Rse = 1/self.he
+            
+        Uglobal = heatFlux/self.entreAxe/(self.Ti-self.Te)
+        Rglobal = 1/Uglobal
+        
+        RLayer = Rglobal - Rsi - Rse
+        ULayer = 1/RLayer
+        
+    
+        R2 = np.sum(np.array(self.layersThickness)/np.array(self.layersConductivity)) # sum of e/lambda
+    
+        if hasAirLayer:
+            R2 += self.ResistanceAirLayer
+    
+        R1 = R2 + Rsi + Rse                          # incl Rsi and Rse
+        R3 = Rglobal                                 # R with metal,, incl Rsi and Rse
+        R4 = RLayer                                  # R with metal, solid layers only
+        
+        print('Unperturbed R-value ',np.round(R2,2),'W/m²K')
+        print('R value ',np.round(RLayer,2),'m²K/W')   
+        print('U value ',np.round(ULayer,2),'W/m²K')   
+        
+        
+        
+        
+        return {'R1':R1,
+                'R2':R2,
+                'R3':R3,
+                'R4':R4
+                }
+
+
+
+
 class Mesher:
     
     def __init__(self,*,layersThickness,pMetal,wMetal,hMetal,entreAxe,MStype,layersConductivity):
@@ -1102,47 +1159,10 @@ class Mesher:
         
 
 
-
-def computeUandRValues(heatFlux,metalProps,boundaryConditions,ndy,T,npoints,layersThickness,layersConductivity,Xuns,Yuns,hasAirLayer=False):
-    
-    
-    Rsi = 1/boundaryConditions['hi']
-    Rse = 1/boundaryConditions['he']
-    
-
-    Uglobal = heatFlux/metalProps['entreAxe']/(boundaryConditions['Ti']-boundaryConditions['Te'])
-    Rglobal = 1/Uglobal
-    
-    RLayer = Rglobal - Rsi - Rse
-    ULayer = 1/RLayer
-    
-
-    R2 = np.sum(np.array(layersThickness)/np.array(layersConductivity)) # sum of e/lambda
-    if hasAirLayer:
-        R2 += 0.18
-    R1 = R2 + Rsi + Rse                          # incl Rsi and Rse
-    R3 = Rglobal                                 # R with metal,, incl Rsi and Rse
-    R4 = RLayer                                  # R with metal, solid layers only
-    
-    print('Unperturbed R-value ',np.round(R2,2),'W/m²K')
-    print('R value ',np.round(RLayer,2),'m²K/W')   
-    print('U value ',np.round(ULayer,2),'W/m²K')   
-    
-    
-    
-    
-    return {'R1':R1,
-            'R2':R2,
-            'R3':R3,
-            'R4':R4
-            }
-
     
  
     
 if __name__ == '__main__':
-    #genMesh()
-
 
     kMetal = 50
     eMetal = 6e-4
@@ -1158,26 +1178,22 @@ if __name__ == '__main__':
 
     shape = 'C-shape'
     
-    metalProps = {'kMetal':kMetal,'eMetal':eMetal,'entreAxe':entreAxe,'shape':shape,'pMetal':pMetal,'hMetal':hMetal,'wMetal':wMetal}   
-    boundaryConditions={'Ti':Ti,'Te':Te,'hi':hi,'he':he}
-    
     layersThickness = [0.01,0.02,0.05,0.09,0.05]
     layersConductivity=[0.20,0.13,0.035,0.035,1.5]
     
-
     X,Y,T,Rdict = MsSolver(layersThickness = layersThickness,
-                               layersConductivity = layersConductivity , 
-                               pMetal=pMetal , 
-                               wMetal = wMetal, 
-                               hMetal = hMetal, 
-                               entreAxe = entreAxe,
-                               kMetal = kMetal, 
-                               eMetal = eMetal, 
-                               hi=hi, 
-                               he=he, 
-                               MStype=shape,
-                               Ti=Ti,
-                               Te=Te).solve()
+                           layersConductivity = layersConductivity , 
+                           pMetal=pMetal , 
+                           wMetal = wMetal, 
+                           hMetal = hMetal, 
+                           entreAxe = entreAxe,
+                           kMetal = kMetal, 
+                           eMetal = eMetal, 
+                           hi=hi, 
+                           he=he, 
+                           MStype=shape,
+                           Ti=Ti,
+                           Te=Te).solve()
 
 
 
