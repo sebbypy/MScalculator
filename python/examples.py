@@ -9,7 +9,7 @@ Created on Sat Jul 10 13:22:17 2021
 import matplotlib.pyplot as plt
 import numpy as np
 
-import MSCalculator_noplot_nonuniform_refactorClass as MSNUnew
+import MSCalculator
 import MSPlotter
 
 
@@ -41,7 +41,7 @@ def example1():
     layersConductivity = [0.2,  0.13, 0.035,  1.5]
     
     
-    solver = MSNUnew.MsSolver(layersThickness = layersThickness,
+    solver = MSCalculator.MsSolver(layersThickness = layersThickness,
                                layersConductivity = layersConductivity.copy() , 
                                pMetal=pMetal , 
                                wMetal = wMetal, 
@@ -80,7 +80,7 @@ def example2():
     layersConductivity = [0.2,  0.13, np.nan,  1.5]
     
     
-    solver = MSNUnew.MsSolver(layersThickness = layersThickness,
+    solver = MSCalculator.MsSolver(layersThickness = layersThickness,
                                layersConductivity = layersConductivity.copy() , 
                                pMetal=pMetal , 
                                wMetal = wMetal, 
@@ -95,7 +95,7 @@ def example2():
                                Te=Te)
     
     solver.solve()
-    MSPlotter.annotatedPlot(solver)
+    MSPlotter.annotatedPlot(solver,grid=False,contour=True,saveFig=True,figureName='example2.pdf')
 
 
 

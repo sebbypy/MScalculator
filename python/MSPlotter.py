@@ -3,7 +3,6 @@ import numpy as np
 
 
 
-#def annotatedPlot(RvaluesDict,metalProps,boundaryConditions,T,layersThickness,layersConductivity,Xuns,Yuns,grid=False,annotate=True,contour=True,saveFig=True,figureName='figure.pdf'):
 def annotatedPlot(solver,grid=False,annotate=True,contour=True,saveFig=True,figureName='figure.pdf'):
 
     fig, (ax1, ax2) = plt.subplots(1, 2,figsize=(10,6))
@@ -70,7 +69,6 @@ def annotatedPlot(solver,grid=False,annotate=True,contour=True,saveFig=True,figu
 
 
     if (contour):
-        #c=plt.tricontourf(Yuns, Xuns, T,11,cmap='plasma')
         c=ax1.tricontourf(Xuns, Yuns, T,11,cmap='coolwarm')
         
         clines=ax1.tricontour(Xuns, Yuns, T,11,colors='black',linewidths=0.5)
@@ -81,17 +79,12 @@ def annotatedPlot(solver,grid=False,annotate=True,contour=True,saveFig=True,figu
     ax1.set_yticklabels([str(int(round(100*l))) for l in yti])
 
 
-    #show in cm instead of m    
 
     xti = list(np.cumsum(solver.layersThickness))
 
-    #xti = ax1.get_xticks()
-    #xti = np.array(xti*100).astype(int)/100
     ax1.set_xticks(xti)
     ax1.set_xticklabels([str(int(round(100*l))) for l in xti])
-   
     
-    #plt.axis('equal')
 
     if saveFig:
         
