@@ -34,7 +34,12 @@ class MsSolver:
                  MStype='U-shape',
                  Ti=20,
                  Te=0,
-                 ResistanceAirLayer=0.18):
+                 ResistanceAirLayer=0.18,
+                 y0Metal=None,
+                 h2Metal=None,
+                 patches=[],
+                 topBC='symmetric',
+                 botBC='symmetric'):
         
 
         self.layersThickness=layersThickness
@@ -58,6 +63,13 @@ class MsSolver:
 
         self.T = None
 
+        self.y0Metal = y0Metal
+        self.h2Metal = h2Metal
+
+        self.patches = patches
+        
+        self.topBC = topBC
+        self.botBC = botBC
     
     def solve(self):
         
@@ -72,6 +84,10 @@ class MsSolver:
         return    
 
         
+    def getTMaxtrix(self):
+        
+        return self.T.reshape((self.npx,self.npy))
+    
     
     def genMesh(self):
           
@@ -81,7 +97,9 @@ class MsSolver:
                                wMetal = self.wMetal,
                                entreAxe = self.entreAxe,
                                MStype = self.MStype,
-                               layersConductivity = self.layersConductivity)
+                               layersConductivity = self.layersConductivity,
+                               y0Metal=self.y0Metal,
+                               h2Metal=self.h2Metal)
         
         xticks,yticks = self.MeshManager.genMesh()
                 
@@ -105,6 +123,11 @@ class MsSolver:
     
         
         kI = self.computeNodesNeighbourConductivity()
+
+        for patch in self.patches:
+            self.patchRegion(kI, patch['xmin'], patch['xmax'],patch['ymin'], patch['ymax'],patch['lambda'])
+            print("patch regions")
+
         
         if self.MStype == 'Wood-shape':
             self.woodConductivity(kI)
@@ -113,6 +136,7 @@ class MsSolver:
 
             MS_ids,nMSNodes,xMetal,yMetal = self.MeshManager.mapMetalNodes() # table that contains -1 if nothing special or a null or positive id  if MS
             self.numberOfMetalNodes = nMSNodes
+
 
         nodeTypes = self.computeNodeType()
         
@@ -254,6 +278,45 @@ class MsSolver:
 
         return 
 
+
+    def patchRegion(self,conductivityMatrix,xmin,xmax,ymin,ymax,lambdavalue):
+        xarray = np.array(self.xticks)
+        yarray = np.array(self.yticks)
+        
+     
+        iLeftWood  = np.argwhere(xarray==xmin)[0][0]
+        iRightWood = np.argwhere(xarray==xmax)[0][0]
+
+        jTopWood  = np.argwhere(yarray==ymax)[0][0]
+        jBotWood = np.argwhere(yarray==ymin)[0][0]
+
+
+
+        #corners
+        conductivityMatrix[iLeftWood,jTopWood,3] = lambdavalue
+        conductivityMatrix[iRightWood,jTopWood,2] = lambdavalue
+        conductivityMatrix[iLeftWood,jBotWood,1] = lambdavalue
+        conductivityMatrix[iRightWood,jBotWood,0] = lambdavalue
+        
+        
+        #boundaries
+        conductivityMatrix[iLeftWood,jBotWood+1:jTopWood,1] = lambdavalue #left boudary --> wood on the right
+        conductivityMatrix[iLeftWood,jBotWood+1:jTopWood,3] = lambdavalue #left boudary --> wood on the right
+        
+        conductivityMatrix[iRightWood,jBotWood+1:jTopWood,0] = lambdavalue #left boudary --> wood on the left
+        conductivityMatrix[iRightWood,jBotWood+1:jTopWood,2] = lambdavalue #left boudary --> wood on the left
+
+        conductivityMatrix[iLeftWood+1:iRightWood,jBotWood,0] = lambdavalue #left boudary --> wood on the top
+        conductivityMatrix[iLeftWood+1:iRightWood,jBotWood,1] = lambdavalue #left boudary --> wood on the top
+        
+        conductivityMatrix[iLeftWood+1:iRightWood,jTopWood,2] = lambdavalue #left boudary --> wood on the left
+        conductivityMatrix[iLeftWood+1:iRightWood,jTopWood,3] = lambdavalue #left boudary --> wood on the left
+       
+        #core
+        conductivityMatrix[iLeftWood+1:iRightWood,jBotWood+1:jTopWood,:] = lambdavalue 
+        
+
+        return 
     
 
 
@@ -359,6 +422,13 @@ class MsSolver:
                     self.addConvectiveBC(nValues,DxAndDy,cellAreas,['leftDown'],self.hi,self.Ti)
     
     
+                    if type(self.topBC) in [int,float]: #adding fixed T BC if self.topBC is a number
+                        self.addConvectiveBC(nValues,DxAndDy,cellAreas,['upRight'],1e5, self.topBC)
+
+    
+    
+    
+    
                 #case 2: normal right
                 if (i== self.npx-1 and (j !=0 and j != self.npy-1)):
                 
@@ -446,6 +516,10 @@ class MsSolver:
                                            kValues)              
     
     
+                        if type(self.topBC) in [int,float]: #adding fixed T BC if self.topBC is a number
+                            self.addConvectiveBC(nValues,DxAndDy,cellAreas,['upRight','upLeft'],1e5, self.topBC)
+    
+    
                 #bot right                
                 if (i==self.npx-1 and j==0):
     
@@ -458,8 +532,13 @@ class MsSolver:
                     self.addConductionFlux(nValues,DxAndDy,cellAreas,['downLeft','leftDown'],kValues)              
                     self.addConvectiveBC(nValues,DxAndDy,cellAreas,['rightDown'],self.he,self.Te)
     
+    
+                    if type(self.topBC) in [int,float]: #adding fixed T BC if self.topBC is a number
+                        self.addConvectiveBC(nValues,DxAndDy,cellAreas,['upLeft'],1e5, self.topBC)
+
+    
                 
-                if self.MStype in ['U-shape','C-shape']:
+                if self.MStype in ['U-shape','C-shape','customProfile']:
     
                     if self.MeshManager.isMetalNode(i,j):    
         
@@ -495,8 +574,6 @@ class MsSolver:
     
     def addConductionFlux(self,nValues,DxAndDy, cellAreas,fluxes,kValues):
 
-        
-        
         
         dxLeft,dxRight,dyUp,dyDown = DxAndDy                   
         AUpDownLeft,AUpDownRight,ALeftRightDown,ALeftRightUp = cellAreas
@@ -594,6 +671,8 @@ class MsSolver:
 
     def addConvectiveBC(self,nValues,DxAndDy, cellAreas,fluxes,hc,Tb):
 
+        
+
         dxLeft,dxRight,dyUp,dyDown = DxAndDy                   
         AUpDownLeft,AUpDownRight,ALeftRightDown,ALeftRightUp = cellAreas
 
@@ -623,6 +702,30 @@ class MsSolver:
                 self.b[n]   += -hc*Tb*ALeftRightDown
 
 
+            if (flux=='upRight'):
+                
+                self.A[n,n] += -hc*AUpDownRight #convective
+                self.b[n]   += -hc*Tb*AUpDownRight
+
+            if (flux=='upLeft'):
+
+                self.A[n,n] += -hc*AUpDownLeft #convective
+                self.b[n]   += -hc*Tb*AUpDownLeft
+    
+
+            if (flux=='downRight'):
+                
+                self.A[n,n] += -hc*AUpDownRight #convective
+                self.b[n]   += -hc*Tb*AUpDownRight
+
+            if (flux=='downLeft'):
+
+                self.A[n,n] += -hc*AUpDownLeft #convective
+                self.b[n]   += -hc*Tb*AUpDownLeft
+
+
+
+
     def computeWallHeatFlux(self):
         
         heatFlux = 0
@@ -635,6 +738,20 @@ class MsSolver:
             totalLenght +=intervalLength
             heatFlux += intervalFlux
     
+
+
+        """heatFlux2 = 0
+        totalLenght2= 0 
+        npoints = len(self.T)
+        
+        for interval in range(1,self.npy):
+            intervalLength = self.yticks[interval]-self.yticks[interval-1]
+            intervalMeanT   = (self.T[npoints-1-self.npy+interval]+self.T[npoints-1-self.npy+interval-1])/2       #the N Last notes nodes are the left bc
+            intervalFlux   = self.he*(self.Te-intervalMeanT)*intervalLength
+    
+            totalLenght2 +=intervalLength
+            heatFlux2 += intervalFlux
+        """
     
         return heatFlux
 
@@ -654,6 +771,19 @@ class MsSolver:
         
 
         return Xuns,Yuns        
+
+    def getLambdaMatrix(self):
+        
+        kI = np.zeros(self.npoints)
+        kI = kI.reshape((self.npx,self.npy))
+        
+        for i in range(self.npx):
+            for j in range(self.npy):
+                
+                kI[i,j] = np.mean(self.kI[i,j,:])            
+        
+
+        return kI
 
 
     def computeUandRValues(self):
@@ -705,7 +835,7 @@ class MsSolver:
 
 class Mesher:
     
-    def __init__(self,*,layersThickness,pMetal,wMetal,hMetal,entreAxe,MStype,layersConductivity):
+    def __init__(self,*,layersThickness,pMetal,wMetal,hMetal,entreAxe,MStype,layersConductivity,y0Metal=None,h2Metal=None):
 
         self.layersThickness=layersThickness
         self.pMetal=pMetal
@@ -715,13 +845,15 @@ class Mesher:
         self.MStype = MStype
         self.layersConductivity=layersConductivity
 
+        self.y0Metal = y0Metal
+        self.h2Metal = h2Metal
 
     def genMesh(self):
         
           #def genMesh(*,layersThickness,pMetal,wMetal,hMetal,shape,entreAxe):
     
         sizeMS = 5e-3
-        sizeOther = 2e-2
+        sizeOther = 1e-2
         
         
         if self.MStype=='C-shape' or 'Wood-shape':
@@ -730,6 +862,12 @@ class Mesher:
         if self.MStype=='U-shape':
             metalYspan = self.wMetal
             metalXspan = self.hMetal
+
+
+        if self.MStype == 'customProfile':
+            metalXspan = self.wMetal
+            metalYspan = max(self.hMetal,self.h2Metal)
+
         
         #pMetal = pMetal
         #entreAxe = entreAxe
@@ -751,16 +889,29 @@ class Mesher:
         
         
         #yticks management
-        yticks = [0,
-                  self.entreAxe/2-metalYspan/2,
-                  self.entreAxe/2+metalYspan/2,
-                  self.entreAxe
-                  ]
-        yticks = self.refineGloballyX(yticks,sizeOther)
-        yticks = self.refineMS(yticks,(self.entreAxe-metalYspan)/2,metalYspan,sizeMS)
+        if self.MStype in ['C-shape','U-shape','Wood-shape']:
+            yticks = [0,
+                      self.entreAxe/2-metalYspan/2,
+                      self.entreAxe/2+metalYspan/2,
+                      self.entreAxe
+                      ]
+            yticks = self.refineGloballyX(yticks,sizeOther)
+            yticks = self.refineMS(yticks,(self.entreAxe-metalYspan)/2,metalYspan,sizeMS)
+
+        else: #customProfile
+            ymin=0.1
+            ymax=0.2
+            yticks = [0,ymin,ymax,self.entreAxe]
+            yticks = self.refineGloballyX(yticks,sizeOther)
+            yticks = self.refineMS(yticks,ymin,metalYspan,sizeMS)
+            
+    
+
 
         self.xticks = np.array(xticks)
         self.yticks = np.array(yticks)
+
+        
         
         self.npx = len(xticks)
         self.npy = len(yticks)
@@ -776,7 +927,12 @@ class Mesher:
                 
         elif (self.MStype=='U-shape'):
             ids,nNodes,xMS,yMS = self.mapUShapeNodes()
+
+
+        elif (self.MStype=='customProfile'):
+            ids,nNodes,xMS,yMS = self.mapCustomProfileNodes()
     
+
         self.MetalNodesIdMatrix = ids
            
         return ids,nNodes,xMS,yMS
@@ -1013,6 +1169,94 @@ class Mesher:
         nNodes = len(j1)+len(i2)+len(j3)
                     
         return ids,nNodes,xMS,yMS
+
+
+    def mapCustomProfileNodes(self):
+
+        
+        x1 = self.pMetal
+        y1 = self.y0Metal
+        x2 = self.pMetal
+        y2 = self.y0Metal+self.hMetal
+        x3 = self.pMetal+self.wMetal
+        y3 = y2
+
+        y4 = y3 - self.h2Metal
+
+        
+        #This configuration
+        #
+        #              line2            
+        #         ******************
+        #         *                *
+        #         *                *
+        # line1   *                *   line3
+        #         *                *
+        #         *                *
+        #         *                *
+            
+        # Line 1
+        i1 = np.argwhere(self.xticks==x1).flatten()[0]
+        j1 = np.argwhere( (self.yticks >= y1) & (self.yticks <= y2)).flatten()
+    
+        #line2    
+        j2 = j1[-1]
+        i2 = np.argwhere( (self.xticks > x2) & (self.xticks < x3 )).flatten()    
+    
+        #line 3
+        j3 = np.argwhere( (self.yticks >= y4) & (self.yticks <= y3 )).flatten()    
+        j3 = np.flip(j3)
+        
+        i3 = np.argwhere (self.xticks == x3 ).flatten()[0]
+    
+        
+        xMS=[]
+        yMS=[]
+    
+        ids = np.zeros((self.npx,self.npy))-1 #matrix holding IDS of MS nodes
+        ids = ids.astype(int)
+    
+        currentID = 0
+    
+        #line 1    
+        for jValue in j1:
+    
+            iValue = i1
+           
+            xMS.append(self.xticks[iValue])        
+            yMS.append(self.yticks[jValue])        
+    
+            ids[iValue,jValue] = currentID
+            currentID+=1
+    
+    
+    
+        for iValue in i2:
+            jValue = j2
+            
+            xMS.append(self.xticks[iValue])        
+            yMS.append(self.yticks[jValue])        
+    
+            ids[iValue,jValue] = currentID
+            currentID+=1
+    
+    
+        for jValue in j3:
+            iValue = i3
+            
+            xMS.append(self.xticks[iValue])        
+            yMS.append(self.yticks[jValue])        
+    
+            ids[iValue,jValue] = currentID
+            currentID+=1
+    
+    
+        nNodes = len(j1)+len(i2)+len(j3)
+
+
+        return ids,nNodes,xMS,yMS
+    
+
     
 
     def isMetalNode(self,i,j):
@@ -1174,7 +1418,7 @@ if __name__ == '__main__':
     layersThickness = [0.01,0.02,0.05,0.09,0.05]
     layersConductivity=[0.20,0.13,0.035,0.035,1.5]
     
-    X,Y,T,Rdict = MsSolver(layersThickness = layersThickness,
+    """X,Y,T,Rdict = MsSolver(layersThickness = layersThickness,
                            layersConductivity = layersConductivity , 
                            pMetal=pMetal , 
                            wMetal = wMetal, 
@@ -1187,7 +1431,21 @@ if __name__ == '__main__':
                            MStype=shape,
                            Ti=Ti,
                            Te=Te).solve()
+    """
+    solver = MsSolver(layersThickness = layersThickness,
+                        layersConductivity = layersConductivity , 
+                        pMetal=pMetal , 
+                        wMetal = wMetal, 
+                        hMetal = hMetal, 
+                        entreAxe = entreAxe,
+                        kMetal = kMetal, 
+                        eMetal = eMetal, 
+                        hi=hi, 
+                        he=he, 
+                        MStype=shape,
+                        Ti=Ti,
+                        Te=Te)
 
-
-
+    solver.solve()
+    print(solver.T)
 
