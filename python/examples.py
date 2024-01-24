@@ -16,15 +16,21 @@ import MSPlotter
 def main():
 
     plt.close('all')
-    """example1()
+
+    validation1()
+    validation2()
+
+
+    example1()
     example2()
-    example3()"""
-    #example4()
-    #example4b()
-    example5()
-    example6()
+    example3()
+    example4()
+    example4b()
+    example4c()
 
 def example1():
+    #basic example
+    
     
     kMetal = 50
     eMetal = 6e-4
@@ -63,6 +69,8 @@ def example1():
     MSPlotter.annotatedPlot(solver,grid=False,annotate=True,contour=True,saveFig=True,figureName='example1.pdf')
 
 def example2():
+    #example with an air layer
+    # NB: default R for air layer is 0.18, but can be changed
     
     kMetal = 50
     eMetal = 6e-4
@@ -103,6 +111,7 @@ def example2():
 
 
 def example3():
+    # example with wood piece instead of metallic
     
     kMetal = 50
     eMetal = 0
@@ -138,11 +147,58 @@ def example3():
                                Te=Te)
     
     solver.solve()
-    MSPlotter.annotatedPlot(solver,grid=False,contour=True,saveFig=True,figureName='example2.pdf')
-
+    MSPlotter.annotatedPlot(solver,grid=False,contour=True,saveFig=True,figureName='example3.pdf')
 
 
 def example4():
+    #example with a non symetric profile (using "custom profile")
+    
+    kMetal = 50
+    eMetal = 6e-4
+    entreAxe = 0.3
+    pMetal = 0.05
+
+    wMetal = 0.1
+    hMetal = 0.1
+    
+    Ti=20
+    Te=0
+    hi=10   
+    he=10
+
+    shape = 'customProfile'
+    
+    
+    layersThickness = [0.2]
+    layersConductivity = [0.035]
+    
+    
+    solver = MSCalculator.MsSolver(layersThickness = layersThickness,
+                               layersConductivity = layersConductivity.copy() , 
+                               pMetal=pMetal , 
+                               wMetal = wMetal, 
+                               hMetal = hMetal, 
+                               entreAxe = entreAxe,
+                               kMetal = kMetal, 
+                               eMetal = eMetal, 
+                               hi=hi, 
+                               he=he, 
+                               MStype=shape,
+                               Ti=Ti,
+                               Te=Te,
+                               y0Metal=0.1,
+                               h2Metal = 0.05)
+    
+    solver.solve()
+    MSPlotter.annotatedPlot(solver,grid=True,contour=True,saveFig=True,figureName='example4.pdf')
+
+
+
+
+def example4b():
+    #example with a non symetric profile, but symetric parameters. Should be exactly the same as example 4c
+    
+    
     
     kMetal = 50
     eMetal = 6e-4
@@ -181,12 +237,11 @@ def example4():
                                h2Metal = 0.1)
     
     solver.solve()
-    MSPlotter.annotatedPlot(solver,grid=True,contour=True,saveFig=True,figureName='example4.pdf')
+    MSPlotter.annotatedPlot(solver,grid=True,contour=True,saveFig=True,figureName='example4b.pdf')
 
 
-def example4b():
-    
-    #validation of example 4
+def example4c():
+    #validation of example 4 using symetric profile
     
     kMetal = 50
     eMetal = 6e-4
@@ -224,10 +279,11 @@ def example4b():
                                h2Metal = 0.1)
     
     solver.solve()
-    MSPlotter.annotatedPlot(solver,grid=True,contour=True,saveFig=True,figureName='example4b.pdf')
+    MSPlotter.annotatedPlot(solver,grid=True,contour=True,saveFig=True,figureName='example4c.pdf')
 
 
-def example5():
+def validation2():
+    # Validation case from NBN EN ISO 10211 - Case 2 for 2D 
     
     kMetal = 230
     eMetal = 1.5e-3
@@ -273,7 +329,7 @@ def example5():
     
     
     solver.solve()
-    MSPlotter.annotatedPlot(solver,grid=False,contour=True,saveFig=False,figureName='example5.pdf',annotate=False,drawLayers=False,orient='horizontal',flipHorizontal=True,
+    MSPlotter.annotatedPlot(solver,grid=False,contour=True,saveFig=False,annotate=False,drawLayers=False,orient='horizontal',flipHorizontal=True,
                             pointsToPlot=[
                                 {'x':0.046,'y':0.5,'label':'A'},
                                 {'x':0.046,'y':0,'label':'B'},
@@ -289,23 +345,18 @@ def example5():
 
     plt.gcf().axes[0].axis('equal')
     plt.gcf().axes[0].set_xlim(left=-0.02,right=0.10)
-    plt.savefig('tescase2-left.pdf')
+    plt.savefig('NBN_EN_ISO_10211_Case2_Left.pdf')
 
     plt.gcf().axes[0].set_xlim(left=0.40,right=0.502)
-    plt.savefig('tescase2-right.pdf')
+    plt.savefig('NBN_EN_ISO_10211_Case2_Right.pdf')
 
-    #plt.gcf().axes[0].set_ylim(bottom=-0.005,top=0.050)
-
-
-    #plt.gcf().axes[0].set_ylim(bottom=-0.005,top=0.1)
-    
     
     heatFlux = solver.computeWallHeatFlux()
     print("Heat flux",heatFlux)
 
 
-def example6():
-    
+def validation1():
+    # Validation case from NBN EN ISO 10211 - Case 1 for 2D 
     
     kMetal = 50
     eMetal = 0
@@ -359,8 +410,16 @@ def example6():
 
 
 
-
-    MSPlotter.annotatedPlot(solver,grid=False,contour=True,saveFig=True,figureName='example6.pdf',orient='horizontal',flipHorizontal=True,pointsToPlot=pointsToPlot,annotate=False,drawLayers=False)
+    MSPlotter.annotatedPlot(solver,grid=False,
+                            contour=True,
+                            saveFig=True,
+                            figureName='NBN_EN_ISO_10211_Case1.pdf',
+                            orient='horizontal',
+                            flipHorizontal=True,
+                            pointsToPlot=pointsToPlot,
+                            annotate=False,
+                            drawLayers=False,
+                            figureTitle="NBN EN ISO 10211 - 2D validation case 1")
 
 
 if __name__ == '__main__':

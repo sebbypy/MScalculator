@@ -414,6 +414,10 @@ class MsSolver:
                     self.addConductionFlux(nValues,DxAndDy,cellAreas,['upRight','rightUp'],kValues)              
                     self.addConvectiveBC(nValues,DxAndDy,cellAreas,['leftUp'],self.hi,self.Ti)
     
+                    if type(self.botBC) in [int,float]: #adding fixed T BC if self.botBC is a number
+                        self.addConvectiveBC(nValues,DxAndDy,cellAreas,['downRight'],1e5, self.botBC)
+
+    
     
                 #top left                
                 if (i==0 and j==self.npy-1):
@@ -465,6 +469,10 @@ class MsSolver:
                     else:               
                         self.addConductionFlux(nValues,DxAndDy,cellAreas,['rightUp','upRight','upLeft','leftUp'],kValues)
                     
+
+                        if type(self.botBC) in [int,float]: #adding fixed T BC if self.topBC is a number
+                            self.addConvectiveBC(nValues,DxAndDy,cellAreas,['downRight','downLeft'],1e5, self.botBC)
+
     
                     
                 #case 5: normal top: symmetric
@@ -516,7 +524,7 @@ class MsSolver:
                                            kValues)              
     
     
-                        if type(self.topBC) in [int,float]: #adding fixed T BC if self.topBC is a number
+                        if type(self.botBC) in [int,float]: #adding fixed T BC if self.topBC is a number
                             self.addConvectiveBC(nValues,DxAndDy,cellAreas,['upRight','upLeft'],1e5, self.topBC)
     
     
@@ -525,7 +533,13 @@ class MsSolver:
     
                     self.addConductionFlux(nValues,DxAndDy,cellAreas,['upLeft','leftUp'],kValues)              
                     self.addConvectiveBC(nValues,DxAndDy,cellAreas,['rightUp'],self.he,self.Te)
+
+
+                    if type(self.botBC) in [int,float]: #adding fixed T BC if self.topBC is a number
+                        self.addConvectiveBC(nValues,DxAndDy,cellAreas,['downLeft'],1e5, self.botBC)
+
     
+
                 #top right
                 if (i==self.npx-1 and j==self.npy-1):
                     

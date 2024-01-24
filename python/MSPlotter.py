@@ -3,7 +3,7 @@ import numpy as np
 
 
 
-def annotatedPlot(solver,orient='vertical',grid=False,annotate=True,contour=True,saveFig=True,figureName='figure.pdf',pointsToPlot=[],drawLayers=True,flipHorizontal=False):
+def annotatedPlot(solver,orient='vertical',grid=False,annotate=True,contour=True,saveFig=True,figureName='figure.pdf',pointsToPlot=[],drawLayers=True,flipHorizontal=False,figureTitle=None):
 
     
     if annotate:
@@ -24,10 +24,14 @@ def annotatedPlot(solver,orient='vertical',grid=False,annotate=True,contour=True
     
         for e in solver.layersThickness:
             eCum += e
-            ax1.axvline(eCum,color='k',lw=1.0)
+            if orient == 'vertical':
+
+                ax1.axvline(eCum,color='k',lw=1.0)
+            elif orient == 'horizontal':
+                ax1.axhline(eCum,color='k',lw=1.0)
 
 
-    if solver.eMetal > 0:
+    if solver.eMetal > 0 or solver.MStype == 'Wood-shape':
         plotMetalProfile({'shape':solver.MStype,
                           'pMetal':solver.pMetal,
                           'eMetal':solver.eMetal,
@@ -49,7 +53,7 @@ def annotatedPlot(solver,orient='vertical',grid=False,annotate=True,contour=True
         
         for e,k in zip(solver.layersThickness,solver.layersConductivity):
             eCum += e           
-            if not np.isnan(k):
+            if k<999:
                 plt.annotate('e = '+str(e*100)+' cm, k = '+str(k),(0.01,0.85-0.05*nLines),xycoords='axes fraction',horizontalalignment='left')
             else:
                 plt.annotate('e = '+str(e*100)+' cm, R = '+str(solver.ResistanceAirLayer)+' (Air layer)',(0.01,0.85-0.05*nLines),xycoords='axes fraction',horizontalalignment='left')
@@ -112,6 +116,8 @@ def annotatedPlot(solver,orient='vertical',grid=False,annotate=True,contour=True
         
         plotPointTemperature(ax1,solver,point['x'],point['y'],point['label'],orient=orient,flipHorizontal=flipHorizontal)
             
+    if figureTitle != None:
+        plt.title(figureTitle)
 
     
     if saveFig:
