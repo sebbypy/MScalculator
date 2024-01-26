@@ -9,6 +9,10 @@ Created on Sat Jul 10 13:22:17 2021
 import matplotlib.pyplot as plt
 import numpy as np
 
+import sys
+
+sys.path.append('../')
+
 import MSCalculator
 import MSPlotter
 
@@ -345,10 +349,10 @@ def validation2():
 
     plt.gcf().axes[0].axis('equal')
     plt.gcf().axes[0].set_xlim(left=-0.02,right=0.10)
-    plt.savefig('NBN_EN_ISO_10211_Case2_Left.pdf')
+    plt.savefig('NBN_EN_ISO_10211_Case2_Left.png')
 
     plt.gcf().axes[0].set_xlim(left=0.40,right=0.502)
-    plt.savefig('NBN_EN_ISO_10211_Case2_Right.pdf')
+    plt.savefig('NBN_EN_ISO_10211_Case2_Right.png')
 
     
     heatFlux = solver.computeWallHeatFlux()
@@ -413,7 +417,7 @@ def validation1():
     MSPlotter.annotatedPlot(solver,grid=False,
                             contour=True,
                             saveFig=True,
-                            figureName='NBN_EN_ISO_10211_Case1.pdf',
+                            figureName='NBN_EN_ISO_10211_Case1.png',
                             orient='horizontal',
                             flipHorizontal=True,
                             pointsToPlot=pointsToPlot,

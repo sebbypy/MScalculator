@@ -348,55 +348,8 @@ class MsSolver:
                 DxAndDy = self.MeshManager.getDxDy(i,j)            
                 cellAreas = self.MeshManager.getCellAreas(i,j)
     
-                
-                #hair= 20
-                #case 1 : normal cell
-                if (i>0 and j>0 and i<self.npx-1 and j<self.npy-1):
-    
-                    if self.nodeTypes[i] == "AirLayerLeftBoundary":
-                       
-                        self.addConductionFlux(nValues,DxAndDy,cellAreas,['downLeft','leftDown','leftUp','upLeft'],
-                                           kValues)
                         
-                        self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['rightUp','rightDown'],
-                                           hair)
-                        
-    
-                    elif self.nodeTypes[i] == "AirLayerFirstNodeAfterLeftBoundary":
-    
-                        self.addConductionFlux(nValues,DxAndDy,cellAreas,['downRight','rightDown','rightUp','upRight'],
-                                           kValues)
-                        
-                        self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['leftUp','leftDown'],
-                                           hair)
-    
-                        
-                    elif self.nodeTypes[i] == "AirLayerLastNodeBeforeRightBoundary":
-    
-                        self.addConductionFlux(nValues,DxAndDy,cellAreas,['downLeft','leftDown','leftUp','upLeft'],
-                                           kValues)
-                        
-                        self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['rightUp','rightDown'],
-                                           hair)
-                        
-    
-                    elif self.nodeTypes[i] == "AirLayerRightBoundary":
-    
-                        self.addConductionFlux(nValues,DxAndDy,cellAreas,['downRight','rightDown','rightUp','upRight'],
-                                           kValues)
-                        
-                        self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['leftUp','leftDown'],
-                                           hair)
-    
-    
-                    else: #normal node
-                     
-                        self.addConductionFlux(nValues,DxAndDy,cellAreas,
-                                          ['rightUp','rightDown',
-                                           'downRight','downLeft',
-                                           'leftDown','leftUp',
-                                           'upLeft','upRight'],
-                                           kValues)
+                self.handleInteriorNode(i, j, nValues, DxAndDy, cellAreas, kValues, hair)
                         
                 
                 #case 2: normal left BC
@@ -524,7 +477,7 @@ class MsSolver:
                                            kValues)              
     
     
-                        if type(self.botBC) in [int,float]: #adding fixed T BC if self.topBC is a number
+                        if type(self.topBC) in [int,float]: #adding fixed T BC if self.topBC is a number
                             self.addConvectiveBC(nValues,DxAndDy,cellAreas,['upRight','upLeft'],1e5, self.topBC)
     
     
@@ -550,39 +503,98 @@ class MsSolver:
                     if type(self.topBC) in [int,float]: #adding fixed T BC if self.topBC is a number
                         self.addConvectiveBC(nValues,DxAndDy,cellAreas,['upLeft'],1e5, self.topBC)
 
+
+
+                self.integrateMetalStructure(i,j,n)
+
+
+    def handleInteriorNode(self,i,j,nValues,DxAndDy,cellAreas,kValues,hair):
+        
+        #hair= 20
+        #case 1 : normal cell
+        if (i>0 and j>0 and i<self.npx-1 and j<self.npy-1):
+
+            if self.nodeTypes[i] == "AirLayerLeftBoundary":
+               
+                self.addConductionFlux(nValues,DxAndDy,cellAreas,['downLeft','leftDown','leftUp','upLeft'],
+                                   kValues)
+                
+                self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['rightUp','rightDown'],
+                                   hair)
+                
+
+            elif self.nodeTypes[i] == "AirLayerFirstNodeAfterLeftBoundary":
+
+                self.addConductionFlux(nValues,DxAndDy,cellAreas,['downRight','rightDown','rightUp','upRight'],
+                                   kValues)
+                
+                self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['leftUp','leftDown'],
+                                   hair)
+
+                
+            elif self.nodeTypes[i] == "AirLayerLastNodeBeforeRightBoundary":
+
+                self.addConductionFlux(nValues,DxAndDy,cellAreas,['downLeft','leftDown','leftUp','upLeft'],
+                                   kValues)
+                
+                self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['rightUp','rightDown'],
+                                   hair)
+                
+
+            elif self.nodeTypes[i] == "AirLayerRightBoundary":
+
+                self.addConductionFlux(nValues,DxAndDy,cellAreas,['downRight','rightDown','rightUp','upRight'],
+                                   kValues)
+                
+                self.addConvectiveFlux(nValues,DxAndDy,cellAreas,['leftUp','leftDown'],
+                                   hair)
+
+
+            else: #normal node
+             
+                self.addConductionFlux(nValues,DxAndDy,cellAreas,
+                                  ['rightUp','rightDown',
+                                   'downRight','downLeft',
+                                   'leftDown','leftUp',
+                                   'upLeft','upRight'],
+                                   kValues)
+   
+
+
+    def integrateMetalStructure(self,i,j,n):
     
                 
-                if self.MStype in ['U-shape','C-shape','customProfile']:
+            if self.MStype in ['U-shape','C-shape','customProfile']:
+
+                if self.MeshManager.isMetalNode(i,j):    
     
-                    if self.MeshManager.isMetalNode(i,j):    
-        
-                        MSID = self.MeshManager.getCurrentNodeMetalID(i,j)
-                        
-                        nMS_next = self.MeshManager.getNextMetalNodeGlobalID(i,j)
-                        nMS_prev = self.MeshManager.getPrevMetalNodeGlobalID(i,j)
+                    MSID = self.MeshManager.getCurrentNodeMetalID(i,j)
+                    
+                    nMS_next = self.MeshManager.getNextMetalNodeGlobalID(i,j)
+                    nMS_prev = self.MeshManager.getPrevMetalNodeGlobalID(i,j)
+
     
-        
-                        if MSID == 0:
-                            
-                            distanceToNext = self.MeshManager.computeDistance(n,nMS_next)
-        
-                            self.A[n,n]        += -1*self.kMetal*self.eMetal/distanceToNext
-                            self.A[n,nMS_next] += self.kMetal*self.eMetal/distanceToNext
-                            
-                        elif MSID == self.numberOfMetalNodes-1:
-                            
-                            distanceToPrevious = self.MeshManager.computeDistance(n,nMS_prev)
-                            self.A[n,n] += -1*self.kMetal*self.eMetal/distanceToPrevious
-                            self.A[n,nMS_prev] += self.kMetal*self.eMetal/distanceToPrevious
+                    if MSID == 0:
                         
-                        else:
-                            distanceToNext = self.MeshManager.computeDistance(n,nMS_next)
-                            distanceToPrevious = self.MeshManager.computeDistance(n,nMS_prev)
-            
-                            self.A[n,nMS_prev] += self.kMetal*self.eMetal/distanceToPrevious
-                            self.A[n,nMS_next] += self.kMetal*self.eMetal/distanceToNext
-                            self.A[n,n] += -self.kMetal*self.eMetal*(1/distanceToPrevious + 1/distanceToNext)
-            
+                        distanceToNext = self.MeshManager.computeDistance(n,nMS_next)
+    
+                        self.A[n,n]        += -1*self.kMetal*self.eMetal/distanceToNext
+                        self.A[n,nMS_next] += self.kMetal*self.eMetal/distanceToNext
+                        
+                    elif MSID == self.numberOfMetalNodes-1:
+                        
+                        distanceToPrevious = self.MeshManager.computeDistance(n,nMS_prev)
+                        self.A[n,n] += -1*self.kMetal*self.eMetal/distanceToPrevious
+                        self.A[n,nMS_prev] += self.kMetal*self.eMetal/distanceToPrevious
+                    
+                    else:
+                        distanceToNext = self.MeshManager.computeDistance(n,nMS_next)
+                        distanceToPrevious = self.MeshManager.computeDistance(n,nMS_prev)
+        
+                        self.A[n,nMS_prev] += self.kMetal*self.eMetal/distanceToPrevious
+                        self.A[n,nMS_next] += self.kMetal*self.eMetal/distanceToNext
+                        self.A[n,n] += -self.kMetal*self.eMetal*(1/distanceToPrevious + 1/distanceToNext)
+        
 
     
     
