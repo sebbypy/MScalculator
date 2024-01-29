@@ -8,13 +8,19 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.min.js"></script>
 <script src="https://unpkg.com/jspdf-autotable@3.5.15/dist/jspdf.plugin.autotable.js"></script>
 <style>
-input[type=button], input[type=submit], select{
-  padding: 1px 1px;
+
+input[type=button], input[type=submit], select, input[type=number]{
+  padding: 5px 5px;
   margin: 1px 1px;
   cursor: pointer;
+  background-color: #fff	;
+  font-size:16px;
+   border-radius: 4px;
 }
 input{width: auto;}
-select{width:170px;}
+select{
+width:170px;
+ border-radius: 4px; }
 
 #layersTable .rightalign {
 	text-align:center;
@@ -51,6 +57,44 @@ vertical-align: text-top;
   border-spacing: 8px 0px;
 }
 
+body{
+font-family: neue-haas-unica,sans-serif;
+color: #495057;
+font-size: 16px;
+background-color: #eee;
+margin:0px;	
+}
+
+  .container
+{
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+  
+  .layout-header
+{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+  height: 64px;
+  box-shadow: 0 1px 3px #646464;
+  padding: 0 10px;
+  margin: 0px;
+}
+
+.layout-header .logo, .layout-header .tool-logo
+{
+  height: 50px;
+  max-height: 50px;
+}
+
+#languageSelect{
+width:50px;
+margin-right:20px;
+}
+
+
 </style>
 
 </head>
@@ -83,6 +127,7 @@ function addRow(eValue = 2, lambdaValue = 0.2, cValue = "insulation",checked='')
         var el = document.createElement("option");
         el.textContent = getMaterialName(opt);
         el.value = opt;
+		el.setAttribute('lang_key',opt);
         select.appendChild(el);
     }
 	
@@ -127,7 +172,6 @@ function removeRow() {
 function upNdown(index,direction)
 {
 
-	console.log("call upndown",index);
 
 	var rows = document.getElementById("layersTable").rows,
 	parent = rows[index].parentNode;
@@ -158,7 +202,6 @@ function switchElementsIds(rowid1,rowid2){
 	
 	var typeID = ["e","t","m","cb","up","down"];
 	
-	console.log("invert",rowid1,rowid2);
 	
 	
 	typeID.forEach( item => {
@@ -264,18 +307,62 @@ function getDefaultMaterialConductivity(material){
 
 }
 
+function getCurrentLanguage() {
+  const languageSelect = document.getElementById('languageSelect');
+  return languageSelect.value; // This will return the value of the selected option, e.g., 'en', 'fr', 'es', etc.
+}
+
 function getMaterialName(material){
 
-	var dict = {'gypsum': 'Platre',
-				'insulation':'Isolant',
-				'briques':'briques',
-				'wood':'Bois',
-				'air_nv':'Lame d\'air NV (R=0.18)',
-				'air_pv':'Lame d\'air PV (R=0.09)',
-				'stone':'Pierre',
-				'concreteBlocs':'Blocs béton'};
+	lang=getCurrentLanguage()
+	
+	
+	
+	var dict = {'gypsum':{
+					'en':'Plaster',
+					'fr':'Platre',
+					'nl':'Pleister'
+					},
+				'insulation':{
+					'en':'Insulation',
+					'fr':'Isolant',
+					'nl':'Insulatie'
+					},
+				'briques':{
+					'en':'Bricks',
+					'fr':'Briques',
+					'nl':'Pleister'
+					},
+				'wood':{
+					'en':'Wood',
+					'fr':'Bois',
+					'nl':'Hout'
+					},
+				'air_nv':{
+					'en':'Air (not ventilated)',
+					'fr':'Lame d\'air NV (R=0.18)',
+					'nl':'Lucht (zonder circulatie)'
+					},
+				'air_pv':{
+					'en':'Air (ventilated)',
+					'fr':'Lame d\'air PV (R=0.09)',
+					'nl':'Lucht (met circulatie)'
+					},
+				'stone':{
+					'en':'Stone',
+					'fr':'Pierre',
+					'nl':'Pierre'
+					},
+				'concreteBlocs':{
+					'en':'Concrete',
+					'fr':'Blocs béton',
+					'nl':'Betonblok'
+					}
+				};
 			
-	return dict[material];
+	return translations[material][lang];
+
+	//return dict[material][lang];
 
 }
 
@@ -583,8 +670,6 @@ function getBlockShape(startX,width,height,refHeight=20){
 	var brickHeight = height/nBrickRows
 	var brickWidth =  Math.floor(width) //convert to int
 	
-	console.log(brickWidth);
-	console.log(startX)
 	
 	for (let i=0; i<nBrickRows; i+=1){
 		
@@ -915,28 +1000,37 @@ async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
 	temperaturePlot = document.getElementById('temperaturePlot');
 	Plotly.newPlot(temperaturePlot, [contour,metalTrace], layout);
 
-
 }
 
 </script>
+
+<header class="layout-header">
+
+<div><span class="logo-full">
+<img class="logo" src="https://images.prismic.io/bbri/0f1c879e-8d5e-4201-a0d2-2dbf3bd95d33_Buildwise_Horizontaal_noir_marge.png?auto=compress,format&amp;rect=0,0,2000,500&amp;w=740&amp;h=185" alt="BBRI logo"></span>
+</div>
+<img class="tool-logo" src="https://images.prismic.io/bbri/6cb70e31-2f6b-4657-80b5-a512d17a71c1_heatload_logo.jpg?auto=compress,format" alt="Tool logo">
+
+<div class="right-header">
+<select id="languageSelect">
+  <option value="en">EN</option>
+  <option value="fr">FR</option>
+  <option value="nl">NL</option>
+</select>
+
+</div>
+</header>
+
+<div class="container">
+
+<h1 lang_key="title">Calculateur Valeur U avec profilé métallique</h1>
 
 <div style = "height:800px; width:750px; float:right;">
 	<div id="geometryPlot" style="height:800px; float:left; border:1px solid black;"></div>
 	<div id="temperaturePlot" style="height:800px; float:left; border:1px solid black;"></div>
 </div>
 
-<select id="languageSelect">
-  <option value="en">EN</option>
-  <option value="fr">FR</option>
-  <option value="nl">NL</option>
-  <!-- Add more languages as needed -->
-</select>
-
-
-
 <div id="layers" style="width: 50%">
-<h1 lang_key="title">Calculateur Valeur U avec profilé métallique</h1>
-
 <h2 lang_key="insert_layers">Insérer les couches</h2>
 
 <table id="layersTable">
@@ -947,8 +1041,8 @@ async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
 	<th lang_key="associate_bridge_to_this_layer">Associer le pont thermique<br> à cette couche ?</th>
   </tr>
 </table> 
-<input type="submit" value="Ajouter une couche" onclick="addRow();return null;">
-<input type="submit" value="Supprimer une couche" onclick="removeRow();return null;">
+<input type="submit" lang_key="add_layer" value="Ajouter une couche" onclick="addRow();return null;">
+<input type="submit" lang_key="delete_layer" value="Supprimer une couche" onclick="removeRow();return null;">
 
 </div>
 
@@ -957,7 +1051,7 @@ async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
 
 <table id="metalTable" textalign="left">
   <tr>
-    <th lang_key="orient" style="text-align:left">Orientation</th>
+    <th lang_key="orientation" style="text-align:left">Orientation</th>
 	<td><select style="width:70px" id='MSshape' onchange="drawAll();return null;">
 			<option value='C-shape'>0°</option>
 			<option value='U-shape'>90°</option>
@@ -977,7 +1071,7 @@ async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
 	<td><input type="number" min="0.1" value="0.6" step="0.1" id="MSe" size="7">
   </tr>
   <tr>
-    <th style="text-align:left" lang_key="distance_from_inside_mm" >Position (depuis l'intérieur) [cm]</th>
+    <th style="text-align:left" lang_key="profile_distance_from_inside_cm" >Position (depuis l'intérieur) [cm]</th>
 	<td><input type="number" min="0" value="2" step="1" id="MSp" onchange="drawAll();return null;" size="7">
   </tr>
   <tr>
@@ -1073,7 +1167,7 @@ function updateRse(){
   </tr>
 </table>
 
-<input type="submit" value="Calculer" onclick="computeAndPlot();return null;">
+<input type="submit" lang_key="calculate_button" value="Calculer" onclick="computeAndPlot();return null;">
 </div>
 
 <script>
@@ -1117,26 +1211,24 @@ async function addPlotlyImage(doc,plotlyPlot,xpos,ypos) {
 
 async function genPDF(){
 
+	lang = getCurrentLanguage()
     
 	// Default export is a4 paper, portrait, using millimeters for units
 	const doc = new jsPDF('a4');
 
 	doc.setFontSize(15);
     
-	// shoud work excpeted that I cannot get png due to CORS
-	//var base64 = await getBase64FromUrl("https://www.coopenergie.be/images/Capturedcran2021-03-3018.24.36.png")
 
-	doc.setFillColor(32,32,32);
-	doc.rect(-1, -1, 220, 100/3, 'F');
+	
+	var base64 = await getBase64FromUrl('https://images.prismic.io/bbri/0f1c879e-8d5e-4201-a0d2-2dbf3bd95d33_Buildwise_Horizontaal_noir_marge.png?auto=compress')
+	//aspect ratio: 4:1
+	
+	doc.addImage(base64,"JPEG",20,10,100,25)
+	
 
-	var base64 = await getBase64FromUrl("https://raw.githubusercontent.com/sebbypy/MScalculator/main/externalRessources/coopEnergieBanner.jpg")
-	doc.addImage(base64,"JPEG",0,0,100,100/3.3)
-	//there are issues with PNG and acrobat reader
+	latestY = 35
 
-
-	latestY = 100/3.3
-
-	doc.text("CoopEnergie - Calculateur valeur U avec profilé métallique", 20, latestY+20);
+	doc.text(translations['pdf_title'][lang], 20, latestY+20);
 
 	doc.setFontSize(12);
 
@@ -1190,19 +1282,20 @@ async function genPDF(){
 	//layers.push({'thickness':'','resistance':getTheoriticalR(true),'resistance2':Rtot,'materialName':'Total(avec Rsi et Rse)'});
 
 	
-	headers = [ { header: 'Type de matériau', dataKey:'materialName'},
-	            { header: 'Epaisseur [cm]', dataKey: 'thickness' },
-				{ header: 'Conductivité thermique [W/mK]', dataKey: 'lambda' },
-				{ header: 'R avec pont thermique [m²K/w]', dataKey: 'resistance2' },
-				{ header: 'R théorique [m²K/w]', dataKey: 'resistance' }
+	headers = [ { header: translations['material_type'][lang], dataKey:'materialName'},
+	            { header: translations['thickness_cm'][lang], dataKey: 'thickness' },
+				{ header: translations['pdf_lambda'][lang], dataKey: 'lambda' },
+				{ header: translations['pdf_R_bridged'][lang], dataKey: 'resistance2' },
+				{ header: translations['pdf_R_unbridged'][lang], dataKey: 'resistance' }
 				]
 
 	// Couches
-	doc.text('Description des couches (de l\'intérieur vers l\'extérieur)',20,latestY+30)
+	doc.text(translations['pdf_layers_title'][lang],20,latestY+30)
 	doc.setFontSize(8);
-	doc.text('La ligne grisée est celle à laquelle le pont thermique a été appliqué',20,latestY+35)
+	doc.text(translations['pdf_layers_grey_line'][lang],20,latestY+35)
 	doc.setFontSize(12);
 
+	BWfillColor = [0,191,182];
 
 	doc.autoTable( {startY: latestY+40,
 					margin: {top:0,left:20},
@@ -1214,7 +1307,7 @@ async function genPDF(){
 					},
 					theme: 'grid',
 					headStyles:{
-						fillColor: [32, 32, 32]
+						fillColor: BWfillColor
 					},
 					columnStyles:{
 					 0: {cellWidth:40},
@@ -1232,19 +1325,19 @@ async function genPDF(){
 	let previousTableY = doc.previousAutoTable.finalY; 
 
 	headers = [ { header: '', dataKey:'materialName'},
-				{ header: 'Avec pont thermique', dataKey: 'resistance2' },
-				{ header: 'Valeur théorique', dataKey: 'resistance' }
+				{ header: translations['pdf_withThermalBridge'][lang], dataKey: 'resistance2' },
+				{ header: translations['pdf_withoutThermalBridge'][lang], dataKey: 'resistance' }
 				]
 
 
 	summary=[]
-	summary.push({'resistance':getTheoriticalR(false),'resistance2':RLayers,'materialName':'R Paroi [m²K/W]'});
+	summary.push({'resistance':getTheoriticalR(false),'resistance2':RLayers,'materialName':translations['pdf_r_wall'][lang]+' [m²K/W]'});
 	summary.push({'resistance':Rsup,'resistance2':Rsup,'materialName':'Rsi+Rse [m²K/W]'});
-	summary.push({'resistance':getTheoriticalR(true),'resistance2':Rtot,'materialName':'R Total [m²K/W]'});
+	summary.push({'resistance':getTheoriticalR(true),'resistance2':Rtot,'materialName':translations['pdf_r_total'][lang]+' [m²K/W]'});
 	summary.push({'resistance':(1/getTheoriticalR(true)).toFixed(3),'resistance2':(1/Rtot).toFixed(3),'materialName':'U [W/m²K]'});
 
 
-	doc.text('Valeurs U et R totales',20,previousTableY+10)
+	doc.text(translations['pdf_total_u_and_r'][lang],20,previousTableY+10)
 	doc.autoTable( {startY: previousTableY+15,
 					margin: {top:0,left:20},
 					body:summary,
@@ -1255,7 +1348,7 @@ async function genPDF(){
 					},
 					theme: 'grid',
 					headStyles:{
-						fillColor: [32, 32, 32]
+						fillColor: BWfillColor
 					},
 					columnStyles:{
 					 0: {cellWidth:40},
@@ -1277,14 +1370,14 @@ async function genPDF(){
         metalData['shape']='90°'
     }
     
-	headers = [ {header: 'Distance de la surface intérieure [cm]', dataKey:'p'},
-	            {header: 'Epaisseur [mm]', dataKey: 'e' },
-				{ header: 'Largeur [cm]', dataKey: 'w' },
-				{ header: 'Hauteur [cm]', dataKey: 'h' },
-				{ header: 'Orientation', dataKey: 'shape' },
+	headers = [ {header: translations['profile_distance_from_inside_cm'][lang], dataKey:'p'},
+	            {header: translations['profile_thickness_mm'][lang], dataKey: 'e' },
+				{ header: translations['profile_width_cm'][lang], dataKey: 'w' },
+				{ header: translations['profile_height_cm'][lang], dataKey: 'h' },
+				{ header: translations['orientation'][lang], dataKey: 'shape' },
 				]
 
-	doc.text('Caractéristiques de la structure métallique',20,previousTableY+10)
+	doc.text(translations['pdf_metal_profile_characteristics'][lang],20,previousTableY+10)
 	doc.autoTable({	startY: previousTableY+15,
 					margin: {top:0,left:20},
 					body: [metalData],
@@ -1295,7 +1388,7 @@ async function genPDF(){
 					},
 					theme: 'grid',
 					headStyles:{
-						fillColor: [32, 32, 32]
+						fillColor: BWfillColor
 					},
 					columnStyles:{
 					 0: {cellWidth:45}
@@ -1312,7 +1405,7 @@ async function genPDF(){
 				]
 
 	previousTableY = doc.previousAutoTable.finalY; 
-	doc.text('Conditions aux limites',20,previousTableY+10)
+	doc.text(translations['boundary_conditions'][lang],20,previousTableY+10)
 	doc.autoTable({	startY: previousTableY+15,
 					margin: {top:0,left:20},
 					body: [bcs],
@@ -1323,7 +1416,7 @@ async function genPDF(){
 					},
 					theme: 'grid',
 					headStyles:{
-						fillColor: [32, 32, 32]
+						fillColor: BWfillColor
 						},
 					});
 
@@ -1331,28 +1424,26 @@ async function genPDF(){
 	previousTableY = doc.previousAutoTable.finalY; 
 
 	doc.setFontSize(8);
-	doc.text("Document généré le "+getDateString(),150,290)
+	doc.text(translations['pdf_generated_on'][lang]+' '+getDateString(),150,290)
 
 	doc.addPage()
 
-	doc.setFillColor(32,32,32);
-	doc.rect(-1, -1, 220, 100/3, 'F');
-	doc.addImage(base64,"JPEG",0,0,100,100/3.3)
-	latestY = 100/3.3
+	doc.addImage(base64,"JPEG",20,10,100,25)
+	latestY = 25
 
 	doc.setFontSize(15);
 
-	doc.text("CoopEnergie - Calculateur valeur U avec profilé métallique", 20, latestY+20);
+	doc.text(translations['pdf_title'][lang], 20, latestY+20);
 
 	doc.setFontSize(12);
-	doc.text('Illustration graphique de la composition de paroi et champs de température calculé',20,latestY+30);
+	doc.text(translations['pdf_drawing_and_temperature_field'][lang],20,latestY+30);
 
 	await addPlotlyImage(doc,'geometryPlot',20,70);
 	await addPlotlyImage(doc,'temperaturePlot',100,70);
 
 
 	doc.setFontSize(8);
-	doc.text("Document généré le "+getDateString(),150,290)
+	doc.text(translations['pdf_generated_on'][lang]+' '+getDateString(),150,290)
 
 
 	window.open(URL.createObjectURL(doc.output("blob")))
@@ -1377,6 +1468,16 @@ const translations = {
     "fr": "Epaisseur [cm]",
     "nl": "Dikte [cm]"
   },
+   "insert_profile":  {
+    "en": "Metal profile characteristics",
+    "fr": "Caractéristiques du profilé",
+    "nl": "Metalprofiel karakteristieken"
+  },
+  "orientation":{
+	"en":"Orientation",
+	"fr":"Orientation",
+	"nl":"Orientatie"
+	},
    "profile_width_cm":{
     "en": "Profile width [cm]",
     "fr": "Largeur du profilé [cm]",
@@ -1386,11 +1487,182 @@ const translations = {
     "en": "Boundary conditions",
     "fr": "Conditions aux limites",
     "nl": "Randvoorwaarden"
-  }
-  
+  },
+  "profile_height_cm":{
+    "en": "Profile height [cm]",
+    "fr": "Hauteur du profilé [cm]",
+    "nl": "Profiel hoogte [cm]"
+  },
+  "profile_thickness_mm":{
+    "en": "Profile thickness [mm]",
+    "fr": "Epaisseur du profilé [mm]",
+    "nl": "Profiel dikte [mm]"
+  },
+  "profile_distance_from_inside_cm":{
+    "en": "Profile position (distance from inside) [cm]",
+    "fr": "Position du profilé (distance depuis l'intérieur) [cm]",
+    "nl": "Profiel locatie (afstand vanaf binnenkant) [cm]"
+  },
+  "center_distance_cm":{
+    "en": "Center distance [cm]",
+    "fr": "Entre-axe [cm]",
+    "nl": "Midden afstand [cm]"
+  },
+  "results":{
+    "en": "Results",
+    "fr": "Résultats",
+    "nl": "Resultaten"
+  },
+  "material_type":{
+    "en": "Material type",
+    "fr": "Type de matériau",
+    "nl": "Materiaaltype"
+  },
+  "associate_bridge_to_this_layer":{
+    "en": "Apply thermal bridge to this layer",
+    "fr": "Associer le pont thermique\n à cette couche",
+    "nl": "Koudebrug aan dit leeg toepassen"
+  },
+  "with_profile":{
+    "en": "With profile",
+	"fr": "Avec profil",
+	"nl": "Met profiel"
+	},
+   "without_profile":{
+    "en": "(theoritical without profile)",
+	"fr": "(theorique sans profil)",
+	"nl": "(thoretische zonder profiel)"
+	},
+	"calculate_button":{
+    "en": "Calculate",
+	"fr": "Calculer",
+	"nl": "Berekenen"
+	},
+	"generate_pdf":{
+    "en": "Generate PDF report",
+	"fr": "Générer rapport PDF",
+	"nl": "PDF"
+	},
+	"add_layer":{
+    "en": "Add layer",
+	"fr": "Ajouter une couche",
+	"nl": "Leeg toevoegen"
+	},
+	"delete_layer":{
+    "en": "Delete layer",
+	"fr": "Supprimer une couche",
+	"nl": "Leeg verwijderen"
+	},
+	'gypsum':{
+		'en':'Plaster',
+		'fr':'Platre',
+		'nl':'Pleister'
+		},
+	'insulation':{
+		'en':'Insulation',
+		'fr':'Isolant',
+		'nl':'Insulatie'
+		},
+	'briques':{
+		'en':'Bricks',
+		'fr':'Briques',
+		'nl':'Pleister'
+		},
+	'wood':{
+		'en':'Wood',
+		'fr':'Bois',
+		'nl':'Hout'
+		},
+	'air_nv':{
+		'en':'Air (not ventilated)',
+		'fr':'Lame d\'air NV (R=0.18)',
+		'nl':'Lucht (zonder circulatie)'
+		},
+	'air_pv':{
+		'en':'Air (ventilated)',
+		'fr':'Lame d\'air PV (R=0.09)',
+		'nl':'Lucht (met circulatie)'
+		},
+	'stone':{
+		'en':'Stone',
+		'fr':'Pierre',
+		'nl':'Pierre'
+		},
+	'concreteBlocs':{
+		'en':'Concrete',
+		'fr':'Blocs béton',
+		'nl':'Betonblok'
+		},
+	'pdf_title':{
+		'en':'U calculator',
+		'fr':'Calculateur U',
+		'nl':'U rekenmachine'
+		},
+	'pdf_layers_title':{
+		'en':'Descrition of the layers (inside to outside)',
+		'fr':"Description des couches (de l'intérieur vers l'extérieur)",
+		'nl':"Bescrhrijving van legen (van binnen naar buiten)"
+		},
+	'pdf_layers_grey_line':{
+		'en':'The grey line is the one to which the thermal bridge has been applied',
+		'fr':"La ligne grisée est celle à laquelle le pont thermique a été appliqué",
+		'nl':"De grijze lijn is digene waarover de koudebrug toegepast werd"
+	},
+	'pdf_lambda':{
+		'en':'Thermal conductivity [W/mK]',
+		'fr':'Conductivité thermique [W/mK]',
+		'nl':'Thermische conductiviteit [W/mK]'
+		},
+	'pdf_R_bridged':{
+		'en':'R with thermal bridge [m²/KW]',
+		'nl':'R met koudebrug [m²/KW]',
+		'fr':'R avec pont thermique [m²/KW]'
+	},
+	'pdf_R_unbridged':{
+		'en':'Theoritical R [m²/KW]',
+		'nl':'Theoretische R [m²/KW]',
+		'fr':'R théorique [m²/KW]'
+	},
+	'pdf_withThermalBridge':{
+		'en':'With thermal bridge',
+		'nl':'Met koudebrug',
+		'fr':'Avec pont thermique'
+		},
+	'pdf_withoutThermalBridge':{
+		'en':'Without thermal bridge',
+		'nl':'Zonder koudebrug',
+		'fr':'Sans pont thermique'
+		},
+	'pdf_drawing_and_temperature_field':{
+		'en': 'Wall composition and temperature field',
+		'nl': 'Wand samenstelling en temperatuur distributie',
+		'fr': 'Composition de la paroi et champ de température'
+		},
+	'pdf_metal_profile_characteristics':{
+		'en': 'characteristics of metal profile',
+		'nl': 'Eigenschappen of metaal profiel',
+		'fr': 'Caractéristiques de la structure métallique'},
+	'pdf_total_u_and_r':{
+		'en':'Total R and U values',
+		'nl':'Totaal R en U waarden',
+		'fr':'Valeurs U et R totales'
+	},
+	'pdf_r_wall':{
+		'en':'R construction',
+		'fr':'R paroi',
+		'nl':'R wand'},
+	'pdf_r_total':{
+		'en':'Total R',
+		'fr':'R Total',
+		'nl':'Totaal R'
+		},
+	'pdf_generated_on':{
+	'en':'Generated on',
+	'fr':'Généré le',
+	'nl':'Berekend op'}
+		
 };
 
-console.log(translations)
 
 function replaceTextBasedOnLanguage(currentLang) {
   document.querySelectorAll('[lang_key]').forEach(element => {
@@ -1398,6 +1670,18 @@ function replaceTextBasedOnLanguage(currentLang) {
     // Check if the key exists in the translations and if the key has a translation for the current language
     if (translations[key] && translations[key][currentLang]) {
       const translation = translations[key][currentLang];
+
+	  if (element.tagName == "INPUT"){
+	    element.value = translation;
+	  }
+	  if (element.tagName == "SELECT"){
+	    element.value = translation;
+	  }
+	  if (element.tagName == "OPTION"){
+		element.textContent = translation;
+	  }
+			
+
       element.textContent = translation;
     } else {
       // If the translation for the key doesn't exist, you can either skip or set a default text
@@ -1414,13 +1698,18 @@ document.getElementById('languageSelect').addEventListener('change', function() 
   replaceTextBasedOnLanguage(selectedLang);
 });
 
+// Optional: Call on page load with default language
+document.addEventListener('DOMContentLoaded', function() {
+  const defaultLang = navigator.language.slice(0, 2); // Or your default language
+  replaceTextBasedOnLanguage(defaultLang);
+});
 
 </script>
 
 
 
 
-<input type="submit" value="Générer rapport PDF" onclick="genPDF();return null;">
+<input type="submit" lang_key = "generate_pdf" value="Générer rapport PDF" onclick="genPDF();return null;">
 
 
 
@@ -1431,8 +1720,12 @@ addRow(eValue=1,lambdaValue=0.13,cValue='wood');
 addRow(eValue=5,lambdaValue=0.035,cValue='insulation',checked='checked');
 addRow(eValue=30,lambdaValue=1.5,cValue='briques');
 
+
+
 loadAllPython();
 </script>
+
+</div>
 
 </body>
 </html> 
