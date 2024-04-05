@@ -84,3 +84,38 @@ width:50px;
 margin-right:20px;
 }
 
+/* Base styles for layout */
+.content-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.description-wrapper {
+  flex: 1; /* Allows this div to grow */
+  min-width: 300px; /* Adjust based on your content's needs */
+}
+
+#plots {
+  flex-basis: 750px; /* Initial width of the plots container */
+  /* Removed float:right; as Flexbox is handling positioning */
+}
+
+/* Media Query for narrower screens */
+@media (max-width: 1024px) { /* Adjust based on when you want the layout to change */
+  .content-wrapper {
+    flex-direction: column;
+  }
+
+  #plots {
+    order: 1; /* Moves the plots above the description but below bcs in the flow */
+    width: 100%; /* Makes the plots container full width */
+    display: flex;
+	flex-basis:100%
+  }
+
+  #geometryPlot, #temperaturePlot {
+    float: none; /* Disable floating for narrow screens */
+    box-sizing: border-box; /* Ensures borders are included in width calculation */
+  }
+}

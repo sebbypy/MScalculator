@@ -476,6 +476,7 @@ async function computeAndPlot(){
 	
 	showRvalues(Rvalues);
 	plotTemperatureField(Xvalues,Yvalues,Zvalues);
+	adjustPlotSizes()
 
 }
 
@@ -643,6 +644,45 @@ async function plotTemperatureField(Xvalues,Yvalues,Zvalues){
 
 }
 
+function adjustPlotSizes() {
+    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    
+    // Define your mobile width breakpoint
+    var mobileWidth = 768; // Example breakpoint, adjust as needed
+
+    // Sizes for mobile and desktop
+    var sizeMobile = {width: 150, height: 400, margin: { l: 15,	r: 5, b: 15, t: 5}}; // Example sizes for mobile
+    var sizeDesktop = {width: 300, height: 800,  margin: { l: 30,	r: 10, b: 30, t: 10}}; // Example sizes for desktop
+
+    // Sizes for mobile and desktop
+    var sizeMobile2 = {width: 200, height: 400,margin: { l: 15,	r: 5, b: 15, t: 5}}; // Example sizes for mobile
+    var sizeDesktop2 = {width: 400, height: 800,margin: { l: 30,	r: 10, b: 30, t: 10}}; // Example sizes for desktop
+
+	
+    // Determine the target size based on current width
+    var targetSize = width < mobileWidth ? sizeMobile : sizeDesktop;
+    var targetSize2 = width < mobileWidth ? sizeMobile2 : sizeDesktop2;
+
+	var cbartickness = width < mobileWidth ? 25:50;
+
+    // Update your Plotly plots with the target size
+    // Assuming you have your Plotly plot data and layout ready
+    // Replace 'yourData' and 'yourLayout' with actual variables
+    var update = {
+        width: targetSize.width, // Update width
+        height: targetSize.height // Update height
+    };
+    var update2 = {
+        width: targetSize2.width, // Update width
+        height: targetSize2.height // Update height,
+    };
+
+
+    // Assuming 'myDiv' is the ID of your Plotly plot container
+    Plotly.relayout('geometryPlot', update);
+	Plotly.relayout('temperaturePlot',update2);
+	Plotly.restyle('temperaturePlot', 'colorbar.thickness', cbartickness, [0]);
+}
 
 
 function updateRsi(){
@@ -691,7 +731,7 @@ function getDateString(){
 async function addPlotlyImage(doc,plotlyPlot,xpos,ypos) {
   
 	geoplot = document.getElementById(plotlyPlot);
-	await Plotly.toImage(plotlyPlot, { format: 'jpeg', width: 1350, height: 2700 })
+	await Plotly.toImage(plotlyPlot, { format: 'jpeg', width: 400, height: 800 })
 		.then(
              function(url)
          {
