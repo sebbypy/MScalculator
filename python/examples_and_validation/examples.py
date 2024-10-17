@@ -21,7 +21,9 @@ def main():
 
     plt.close('all')
 
-    validation1()
+    example1_condens()
+
+    """validation1()
     validation2()
 
 
@@ -31,10 +33,12 @@ def main():
     example4()
     example4b()
     example4c()
+    """
+    
+    
 
 def example1():
     #basic example
-    
     
     kMetal = 50
     eMetal = 6e-4
@@ -71,6 +75,78 @@ def example1():
     solver.solve()
 
     MSPlotter.annotatedPlot(solver,grid=False,annotate=True,contour=True,saveFig=True,figureName='example1.pdf')
+
+
+def example1_condens():
+    #basic example
+    
+    kMetal = 50
+    eMetal = 6e-4
+    entreAxe = 1
+    pMetal = 0.022
+    wMetal = 0.05
+    hMetal = 0.05
+    
+    Ti=20
+    Te=0
+    hi=1e5   
+    he=1e5
+
+    shape = 'C-shape'
+    
+    layersThickness = [0.01,0.012,  0.05, 0.3]
+    layersConductivity = [0.2,  0.13, 0.035,  1.5]
+    
+    
+    
+    solver = MSCalculator.MsSolver(layersThickness = layersThickness,
+                               layersConductivity = layersConductivity.copy() , 
+                               pMetal=pMetal , 
+                               wMetal = wMetal, 
+                               hMetal = hMetal, 
+                               entreAxe = entreAxe,
+                               kMetal = kMetal, 
+                               eMetal = eMetal, 
+                               hi=hi, 
+                               he=he, 
+                               MStype=shape,
+                               Ti=Ti,
+                               Te=Te)
+
+    delta_air = 0.185e-9
+    
+    mu = 15
+    
+    
+    
+    layers_delta = [float(1/mu)]
+    layersThickness = [0.2]
+
+    
+    mu_solver = MSCalculator.MsSolver(layersThickness = layersThickness,
+                               layersConductivity = layers_delta.copy() , 
+                               pMetal=pMetal , 
+                               wMetal = wMetal, 
+                               hMetal = hMetal, 
+                               entreAxe = entreAxe,
+                               kMetal = float(1/mu), 
+                               eMetal = 0.0, 
+                               hi=1e5, 
+                               he=1e5, 
+                               MStype=shape,
+                               Ti=1320,
+                               Te=280)
+    
+    
+    #solver.solve()
+    #MSPlotter.annotatedPlot(solver,grid=False,annotate=True,contour=True,saveFig=True,figureName='example1.pdf')
+    mu_solver.solve()
+    flux= mu_solver.computeWallHeatFlux()
+    print(flux)
+    print(flux*delta_air)
+    MSPlotter.annotatedPlot(mu_solver,grid=False,annotate=True,contour=True,saveFig=False)
+
+    
 
 def example2():
     #example with an air layer
@@ -424,6 +500,9 @@ def validation1():
                             annotate=False,
                             drawLayers=False,
                             figureTitle="NBN EN ISO 10211 - 2D validation case 1")
+
+
+
 
 
 if __name__ == '__main__':
